@@ -1,0 +1,10 @@
+.DS_Store
+._*
+*.o
+*.o.d
+.*.swp
+slprj/*
+*/slprj/*
+*.mex*
+*.mdl.autosave
+*.slx.autosave
