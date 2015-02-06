@@ -1,0 +1,83 @@
+# Assignment
+---------
+You will need to prepare a project proposal by Monday, February 9. You can either pick one of the ideas I presented in class, or propose a new idea (in which case you must discuss your idea with me before preparing the proposal). You are welcome to bug me by email if you need more information or feedback.
+
+In the proposal please explain:
+
+Title of project and team. Please form teams of 2 persons. Exceptions (teams of 1 person) are accepted but discouraged. I need only one proposal per team.
+Description of what the project is about along with references to relevant papers and material. Please be as detailed as you can.
+Platform (hardware and software) on which you will do the project (PC vs iPhone, Matlab vs OpenCV, etc.)
+Describe what you think the most challenging parts of the project are
+What do you plan to deliver and demonstrate by the last day of class (March 12). This will include a PowerPoint presentation and hopefully a live demo
+Contingency plans: what if something turns out to be more difficult than you thought - what will you show me then?
+I will get back to you with comments soon after your submission, and you will be able to resubmit a revised version of your proposal then. 
+
+In addition, each team  will need to prepare a short (~5 slides) Powerpoint presentation that will be presented in class on Tuesday, Feb. 17. This presentation will have all of the information in your (revised) proposal.
+
+# Readme
+-------
+
+## Impact Alert System
+This repository contains the Impact Alert System for the CMPE264 project of David G. and Sharon R. This system is designed to detect objects moving towards a camera, and produce an audible alert before impact.
+
+## Platform
+
+Multiple platforms are being explored before implementation can begin. Currently, we are testing MATLAB Simulink and OpenCV on both PC and Mac. There is also the possibilty of porting the code to a microcontroller or mobile platform.
+
+# Slides
+--------
+
+## Descrition
+* Goal: Detect a ball moving towards the camera, and sound an alarm before the ball hits the camera.
+
+* References:
+	- Computer Vision: Algorithms and Applications, by R. Szeliski (Section [8.4] -  Optical flow)
+	- Monocular distance estimation from optic flow during active landing maneuvers, by F. Breugel et al.
+	- Realtime Depth Estimation and Obstacle Detection from Monocular Video, By A. Wedel et al.
+
+* Algorithm: track focus of expansion from optical flow
+	- Real time (Up to 30 frames per second)
+	- Object detection and tracking
+		- Background subtraction
+		- Optical flow 
+		- Kalman filter
+	- Trajectory prediction
+		- Markov model
+	- Parameters
+		- Object size at known distances
+		- Object mass
+		- Camera size (for impact prediction)
+
+## Platform
+
+* Software 
+	- Matlab/Simulink/OpenCV
+	- Generated code to microcontroller, port to mobile, or C#
+
+* Hardware (depends on performance of simulation)
+	- Camera 
+	- PC/Mac, Microcontroller, or Mobile
+	- Power Supply
+	- Special ball (bright green)
+
+## Challenges
+
+* Implementation in real time 
+	- Response time
+* Direction
+ 	- Predicted trajectory
+
+## Presentation (March 12th)
+
+* Demonstration of tested scenarios
+* Live Demonstration
+
+## Contingency
+
+* In case of success
+	- Extension for moving camera with static scene
+
+* In case of difficulties
+	- Algorithm in Simulated environment
+	- Port to mobile device
+	- Port to C environment

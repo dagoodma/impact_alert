@@ -1,0 +1,8 @@
+@ARTICLE{Horn81determiningoptical,
+    author = {Berthold K. P. Horn and Brian G. Schunck},
+    title = {Determining Optical Flow},
+    journal = {ARTIFICAL INTELLIGENCE},
+    year = {1981},
+    volume = {17},
+    pages = {185--203}
+}
