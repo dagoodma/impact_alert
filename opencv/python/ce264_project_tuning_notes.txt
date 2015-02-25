@@ -1,0 +1,38 @@
+Tuning ball detector:
+
+First attempt:
+Threshold parameters:
+	sat_lower: 77
+	sat_upper*: 256
+	hue_lower: 7
+	filter_iterations: 7
+	hue_upper: 20
+	val_upper*: 256
+	val_lower: 4
+Hough parameters:
+	hough_threshlower: 32
+	hough_minradius: 20
+	hough_maxradius: 287
+	hough_dp: 1
+	hough_threshupper: 122
+	
+	
+Attempt 2:
+
+Threshold parameters:
+	sat_lower: 59
+	sat_upper*: 256
+	hue_lower: 7
+	filter_iterations: 7
+	hue_upper: 5
+	val_upper*: 256
+	val_lower: 0
+Hough parameters:
+	hough_threshlower: 21
+	hough_minradius: 20
+	hough_maxradius: 287
+	hough_dp: 1
+	hough_threshupper: 175
+	
+	
+Note that camera color and brightness are an issue!!
