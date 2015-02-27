@@ -144,7 +144,17 @@ def runBallDetection(videoFile):
 			cv2.imshow('Camera',frame)
 			cv2.imshow('HSV',hsvFrame)
 			cv2.imshow('Thresholded', threshFrame)
-			if cv2.waitKey(1) & 0xFF == ord('q'):
+			waiting = True
+			wantExit = False
+			while (waiting):
+				key = cv2.waitKey(1) & 0xFF
+
+				if (key == ord('q')):
+					wantExit = True
+					waiting = False
+				if (key == ord('n')):
+					waiting = False
+			if (wantExit):
 				break
 
 	except Exception as e:
