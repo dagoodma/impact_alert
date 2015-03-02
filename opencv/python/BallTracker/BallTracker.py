@@ -288,6 +288,11 @@ class BallTracker:
             self.TrackingParameters.ParameterChanged = False
             haveNewFrame = False
 
+            # Add text
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            cv2.putText(newFrame, "Frame {} of {}.".format(frame_i, int(self.Cap.get(cv2.CAP_PROP_FRAME_COUNT))),
+                (10, self.Height - 10), font, 0.6, (255,255,255), 1)
+
             # Show the videos
             cv2.imshow('Camera',newFrame)
             cv2.imshow('Thresholded', threshFrame)

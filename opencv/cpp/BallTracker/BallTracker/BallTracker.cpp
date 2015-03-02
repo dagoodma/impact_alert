@@ -64,7 +64,7 @@ BallTracker::BallTracker(int deviceNum, bool debug, bool debugVerbose, bool trac
 BallTracker::BallTracker(std::string fileName, bool debug, bool debugVerbose, bool trackBall,
     bool startVideoPaused, TrackingParameters *trackingParameters) {
 	isRunning = false;
-	frameNumber = 0;
+	frameNumber = 1;
 	interfaceIsInitialized = false;
 	videoIsPaused = false;
 	foundBall = false;
@@ -377,9 +377,10 @@ void BallTracker::drawBall(cv::Mat *frame, cv::Point2i center, int outerRadius, 
 	char buf[250];
 	double textScale = 0.8f;
 	int textThickness = 1;
+	cv::Scalar textColor(0,255,0);
 	sprintf(buf,"(x: %u, y:%u), %u px",center.x, center.y, outerRadius);
 	cv::putText(*frame, std::string(buf), cv::Point(center.x + outerRadius, center.y + outerRadius),
-		cv::FONT_HERSHEY_PLAIN, textScale, crosshairColor, textThickness);
+		cv::FONT_HERSHEY_PLAIN, textScale, textColor, textThickness);
 }
 
 /*----------------------- Non-member Functions ------------------------*/
