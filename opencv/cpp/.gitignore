@@ -1,0 +1,8 @@
+*.sdf
+*.pdb
+*.exe
+ipch/
+BallTracker/BallTracker/Debug/
+BallTracker/BallTracker/Release/
+BallTracker/Debug/
+
