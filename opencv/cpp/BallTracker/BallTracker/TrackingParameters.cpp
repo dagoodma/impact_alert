@@ -4,8 +4,9 @@
 
 
 TrackingParameters::TrackingParameters(bool debug, int hueLower, int hueUpper, int satLower, int satUpper, int valLower,
-    int valUpper, int filterIterations, int filterSigma, int houghDp, int houghMinDist, int houghThreshLower,
-    int houghThreshUpper, int houghMinRadius, int houghMaxRadius, int contourMaxArea, int contourMinArea, int contourMaxObjects) {
+    int valUpper, int filterBackgroundOn, int filterIterations, int filterKernel, int filterKernelSize, int filterBlurOn,
+	int filterSigma, int houghOn, int houghMinDist, int houghThreshLower, int houghThreshUpper, int houghMinRadius,
+	int houghMaxRadius, int contourMaxArea, int contourMinArea) {
     // Save parameters
     parameters["hueLower"] = hueLower;
     parameters["hueUpper"] = hueUpper;
@@ -13,9 +14,13 @@ TrackingParameters::TrackingParameters(bool debug, int hueLower, int hueUpper, i
     parameters["satUpper"] = satUpper;
     parameters["valLower"] = valLower;
     parameters["valUpper"] = valUpper;
+	parameters["filterBackgroundOn"] = filterBackgroundOn;
     parameters["filterIterations"] = filterIterations;
+	parameters["filterKernel"] = filterKernel;
+	parameters["filterKernelSize"] = filterKernelSize;
+	parameters["filterBlurOn"] = filterBlurOn;
     parameters["filterSigma"] = filterSigma;
-    parameters["houghDP"] = houghDp;
+	parameters["houghOn"] = houghOn;
 	parameters["houghMinDist"] = houghMinDist;
     parameters["houghThreshLower"] = houghThreshLower;
     parameters["houghThreshUpper"] = houghThreshUpper;
@@ -23,7 +28,6 @@ TrackingParameters::TrackingParameters(bool debug, int hueLower, int hueUpper, i
     parameters["houghMaxRadius"] = houghMaxRadius;
 	parameters["contourMaxArea"] = contourMaxArea;
 	parameters["contourMinArea"] = contourMinArea;
-	parameters["contourMaxObjects"] = contourMaxObjects;
     this->debug = debug;
 	parameterChanged = false;
 }
@@ -50,7 +54,7 @@ int TrackingParameters::getParameter(std::string key) {
     if (hasParameter(key))
         return parameters[key];
     else
-        throw std::out_of_range("Key not found");
+        throw std::out_of_range("Key not found: " + key);
 }
 
 bool TrackingParameters::hasParameter(std::string key) {

@@ -166,16 +166,7 @@ void BallTracker::run() {
 		cap.release();
 	}
 	
-#ifdef USE_BACKGROUND_FILTER
 	backgroundSubtractor = cv::createBackgroundSubtractorMOG2();
-#endif
-	
-	// Build kernels 
-	// TODO move this into function for checkbox/callback
-	erosionKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3,3));
-	dilationKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(8,8));
-	//erosionKernel = cv::Mat();
-	//dilationKernel = cv::Mat();
 
 	// Main loop
 	while (isRunning) {
@@ -275,19 +266,27 @@ void BallTracker::initializeInterface() {
     cv::namedWindow("Controls", cv::WINDOW_NORMAL);
 
 	// Filter window trackbars
-	createTrackbar("hueLower", "Controls", DEFAULT_FILTER_HSV_MAX);
-	createTrackbar("hueUpper", "Controls", DEFAULT_FILTER_HSV_MAX);
-	createTrackbar("satLower", "Controls", DEFAULT_FILTER_HSV_MAX);
-	createTrackbar("valLower", "Controls", DEFAULT_FILTER_HSV_MAX);
-	createTrackbar("filterIterations", "Controls", DEFAULT_FILTER_ITERATIONS_MAX);
-	createTrackbar("filterSigma", "Controls", DEFAULT_FILTER_SIGMA_MAX);
+	createTrackbar("hueLower", "Controls", FILTER_HSV_MAX);
+	createTrackbar("hueUpper", "Controls", FILTER_HSV_MAX);
+	createTrackbar("satLower", "Controls", FILTER_HSV_MAX);
+	createTrackbar("valLower", "Controls", FILTER_HSV_MAX);
+	createTrackbar("filterBackgroundOn", "Controls", 1);
+	createTrackbar("filterIterations", "Controls",  FILTER_ITERATIONS_MAX);
+	createTrackbar("filterKernel", "Controls", FILTER_KERNEL_MAX); // rect = 0, ellipse = 1, cross = 2
+	createTrackbar("filterKernelSize", "Controls", FILTER_KERNEL_SIZE_MAX);
+	createTrackbar("filterBlurOn", "Controls", 1);
+	createTrackbar("filterSigma", "Controls", FILTER_SIGMA_MAX);
 
-	// Frame window trackbars
-	createTrackbar("houghDP", "Controls", DEFAULT_HOUGH_DP_MAX);
-	createTrackbar("houghThreshUpper", "Controls", DEFAULT_HOUGH_THRESH_MAX);
-	createTrackbar("houghThreshLower", "Controls", DEFAULT_HOUGH_THRESH_MAX);
-	createTrackbar("houghMinRadius", "Controls", DEFAULT_HOUGH_RADIUS_MAX);
-	createTrackbar("houghMaxRadius", "Controls", DEFAULT_HOUGH_RADIUS_MAX);
+	// Hough detection trackbars
+	createTrackbar("houghOn", "Controls", 1);
+	createTrackbar("houghThreshUpper", "Controls", HOUGH_THRESH_MAX);
+	createTrackbar("houghThreshLower", "Controls", HOUGH_THRESH_MAX);
+	createTrackbar("houghMinRadius", "Controls", HOUGH_RADIUS_MAX);
+	createTrackbar("houghMaxRadius", "Controls", HOUGH_RADIUS_MAX);
+
+	// Contour detection trackbars
+	createTrackbar("contourMaxArea", "Controls", CONTOUR_MAX_AREA_MAX);
+	createTrackbar("contourMinArea", "Controls", CONTOUR_MIN_AREA_MAX);
 }
 
 void BallTracker::createTrackbar(const char* parameterName, const char* windowName, int maxValue) {
@@ -298,15 +297,11 @@ void BallTracker::createTrackbar(const char* parameterName, const char* windowNa
 
 void BallTracker::filterFrame(cv::Mat &src, cv::Mat &dst) {
 	// Filter with background subtraction
-#ifdef USE_BACKGROUND_FILTER
 	cv::Mat frameGray(src.size(), src.type());
 	cv::cvtColor(src,frameGray, cv::COLOR_BGR2BGRA);
 	backgroundSubtractor->apply(frameGray,backgroundMask,0);
-	dst = backgroundMask;
-#endif
 
 	// Filter with HSV thresholds
-#ifdef USE_HSV_FILTER
 	cv::Mat frameHsv(src.size(), src.type());
 	cv::cvtColor(src,frameHsv, cv::COLOR_BGR2HSV);
 	cv::Scalar hsvRangeLower = cv::Scalar(trackingParameters->getParameter("hueLower"),
@@ -316,27 +311,28 @@ void BallTracker::filterFrame(cv::Mat &src, cv::Mat &dst) {
 		trackingParameters->getParameter("satUpper"),
 		trackingParameters->getParameter("valUpper"), 0);
 
-#ifdef USE_BACKGROUND_FILTER // combine filter
-	cv::Mat temp;
-	cv::inRange(frameHsv, hsvRangeLower, hsvRangeUpper, temp);
-	dst = dst & temp;
-#else
 	cv::inRange(frameHsv, hsvRangeLower, hsvRangeUpper, dst);
-#endif
-#endif
+
+	// Combine with background filtering if enabled
+	if (trackingParameters->getParameter("filterBackgroundOn"))
+		dst = dst & backgroundMask;
 
 	// Filter image with dilation, guassian blur, and erosion
-#ifdef USE_MORPH_FILTER
 	int iterations = trackingParameters->getParameter("filterIterations");
+	int kernelSize = trackingParameters->getParameter("filterKernelSize");
+	cv::Mat kernel = cv::getStructuringElement(trackingParameters->getParameter("filterKernel"), cv::Size(kernelSize,kernelSize));
+	// Dilate
 	for (uint8_t i = 0; i < iterations; i++)
-		cv::dilate(dst, dst, dilationKernel); 
-#ifdef USE_BLUR_FILTER
-	cv::GaussianBlur(dst, dst, cv::Size(0,0), std::max(trackingParameters->getParameter("filterSigma"),1),
-		std::max(trackingParameters->getParameter("filterSigma"),1));
-#endif
+		cv::dilate(dst, dst, kernel); 
+
+	// Gaussian blur if enabled
+	if (trackingParameters->getParameter("filterBlurOn"))
+		cv::GaussianBlur(dst, dst, cv::Size(0,0), std::max(trackingParameters->getParameter("filterSigma"),1),
+			std::max(trackingParameters->getParameter("filterSigma"),1));
+
+	// Erode
 	for (uint8_t i = 0; i < iterations; i++)
-		cv::erode(dst, dst, erosionKernel); 
-#endif
+		cv::erode(dst, dst, kernel); 
 }
 
 bool BallTracker::detectBall(cv::Mat &frame, cv::Point2i &center, int &radius) {
@@ -345,66 +341,67 @@ bool BallTracker::detectBall(cv::Mat &frame, cv::Point2i &center, int &radius) {
 	center.x = 0;
 	center.y = 0;
 
-#ifdef USE_HOUGH_DETECTION
-	std::vector<cv::Vec3f> circles;
-	HoughCircles(frame, circles, cv::HOUGH_GRADIENT, std::max(trackingParameters->getParameter("houghDP"),1),
-		trackingParameters->getParameter("houghMinDist"), std::max(trackingParameters->getParameter("houghThreshUpper"),1),
-		std::max(trackingParameters->getParameter("houghThreshLower"),1), trackingParameters->getParameter("houghMinRadius"),
-		trackingParameters->getParameter("houghMaxRadius"));
+	if (trackingParameters->getParameter("houghOn")) {
+		std::vector<cv::Vec3f> circles;
+		HoughCircles(frame, circles, cv::HOUGH_GRADIENT, 1,
+			trackingParameters->getParameter("houghMinDist"), std::max(trackingParameters->getParameter("houghThreshUpper"),1),
+			std::max(trackingParameters->getParameter("houghThreshLower"),1), trackingParameters->getParameter("houghMinRadius"),
+			trackingParameters->getParameter("houghMaxRadius"));
 
-	// Find the largest circle
-	float maxRadius = 0.0;
-	float x = 0;
-	float y = 0;
+		// Find the largest circle
+		float maxRadius = 0.0;
+		float x = 0;
+		float y = 0;
 
-	for (size_t i = 0; i < circles.size(); i++) {
-		x = circles[i][0];
-		y = circles[i][1];
-		if (circles[i][2] > maxRadius) {
-			maxRadius = circles[i][2];
-			found = true;
-			center.x = int(x + 0.5f);
-			center.y = int(y + 0.5f);
-			radius = int(maxRadius + 0.5f);
-		}
-	}
-#else
-	// Contour detection
-	cv::Mat temp;
-	frame.copyTo(temp);
-	std::vector<std::vector<cv::Point>> contours;
-	std::vector<cv::Vec4i> hierarchy;
-
-	cv::findContours(temp,contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
-
-	// Look for largest moment
-	double maxArea = 0.0;
-	float x = 0.0, y = 0.0;
-	int numObjects = hierarchy.size();
-	if (numObjects > trackingParameters->getParameter("contourMaxObjects")) {
-		if (debug)
-			std::cout << "Contour detection found too many objects!" << std::endl;
-	}
-	else if (numObjects > 0) {
-		// Use hierarchy to determine next 
-		for (int i = 0; i >= 0; i = hierarchy[i][0]) {
-		//for (int i = 0; i < numObjects; i++) {
-			cv::Moments moment = cv::moments((cv::Mat)contours[i]);
-			double objectArea = moment.m00;
-			double objectRadius = sqrt(objectArea/M_PI);
-			if (objectArea > trackingParameters->getParameter("contourMinArea")
-				&& objectArea < trackingParameters->getParameter("contourMaxArea")
-				&& objectArea > maxArea) {
-					found = true;
-					maxArea = objectArea;
-					center.x = (int)(moment.m10/objectArea);
-					center.y = (int)(moment.m01/objectArea);
-					radius = (int)objectRadius;
+		for (size_t i = 0; i < circles.size(); i++) {
+			x = circles[i][0];
+			y = circles[i][1];
+			if (circles[i][2] > maxRadius) {
+				maxRadius = circles[i][2];
+				found = true;
+				center.x = int(x + 0.5f);
+				center.y = int(y + 0.5f);
+				radius = int(maxRadius + 0.5f);
 			}
-
 		}
-	}
-#endif
+	} // hough circle detection
+	else {
+		// Contour detection
+		cv::Mat temp;
+		frame.copyTo(temp);
+		std::vector<std::vector<cv::Point>> contours;
+		std::vector<cv::Vec4i> hierarchy;
+
+		cv::findContours(temp,contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
+
+		// Look for largest moment
+		double maxArea = 0.0;
+		float x = 0.0, y = 0.0;
+		int numObjects = hierarchy.size();
+		if (numObjects > DEFAULT_CONTOUR_MAX_OBJECTS) {
+			if (debug)
+				std::cout << "Contour detection found too many objects!" << std::endl;
+		}
+		else if (numObjects > 0) {
+			// Use hierarchy to determine next 
+			for (int i = 0; i >= 0; i = hierarchy[i][0]) {
+			//for (int i = 0; i < numObjects; i++) {
+				cv::Moments moment = cv::moments((cv::Mat)contours[i]);
+				double objectArea = moment.m00;
+				double objectRadius = sqrt(objectArea/M_PI);
+				if (objectArea > trackingParameters->getParameter("contourMinArea")
+					&& objectArea < trackingParameters->getParameter("contourMaxArea")
+					&& objectArea > maxArea) {
+						found = true;
+						maxArea = objectArea;
+						center.x = (int)(moment.m10/objectArea);
+						center.y = (int)(moment.m01/objectArea);
+						radius = (int)objectRadius;
+				}
+
+			}
+		}
+	} // contour detection
 
 	return found;
 }

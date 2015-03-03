@@ -16,10 +16,10 @@
 #define DEFAULT_CAM_WIDTH   640
 #define DEFAULT_CAM_HEIGHT  480
 
-// Filter methods
+// Filter methods (moved to parameter struct)
 //#define USE_BACKGROUND_FILTER // Gaussian filter
-#define USE_HSV_FILTER	  // HSV range filter
-#define USE_MORPH_FILTER	// morphology (erosion and dilation) filter
+//#define USE_HSV_FILTER	  // HSV range filter
+//#define USE_MORPH_FILTER	// morphology (erosion and dilation) filter
 //#define USE_BLUR_FILTER	      // Gaussian blur
 //#define USE_HOUGH_DETECTION // uses HoughCircle detection, or contour detection if not
 
@@ -178,12 +178,8 @@ class BallTracker {
         CaptureType::Enum captureType;
         std::map<std::string, float> captureProperties;
         TrackingParameters *trackingParameters;
-		cv::Mat erosionKernel;
-		cv::Mat dilationKernel;
-#ifdef USE_BACKGROUND_FILTER
 		cv::Ptr<cv::BackgroundSubtractor> backgroundSubtractor;
 		cv::Mat backgroundMask;
-#endif
 };
 
 #endif
