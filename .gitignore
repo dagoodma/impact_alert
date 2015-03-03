@@ -3,6 +3,7 @@
 *.o
 *.o.d
 .*.swp
+*.m~
 slprj/*
 */slprj/*
 *.mex*
