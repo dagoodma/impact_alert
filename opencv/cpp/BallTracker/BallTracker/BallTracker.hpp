@@ -17,9 +17,11 @@
 #define DEFAULT_CAM_HEIGHT  480
 
 // Filter methods
-#define USE_BACKGROUND_FILTER // Gaussian filter
+//#define USE_BACKGROUND_FILTER // Gaussian filter
 #define USE_HSV_FILTER	  // HSV range filter
-#define USE_BLUR_FILTER	      // Gaussian blur
+#define USE_MORPH_FILTER	// morphology (erosion and dilation) filter
+//#define USE_BLUR_FILTER	      // Gaussian blur
+//#define USE_HOUGH_DETECTION // uses HoughCircle detection, or contour detection if not
 
 /**
 	Slider callback data contains a pointer to the TrackingParameters instance,
@@ -126,11 +128,10 @@ class BallTracker {
     private:
         // Methods
         void initializeInterface();
-        void drawBall(cv::Mat *frame, cv::Point2i center, int outerRadius,
+        void drawBall(cv::Mat &frame, cv::Point2i center, int outerRadius,
             int innerRadius=3, const cv::Scalar& innerColor=cv::Scalar(0,255,0),
             const cv::Scalar& outerColor=cv::Scalar(0,0,255),
 			const cv::Scalar& crosshairColor=cv::Scalar(255,160,160));
-        cv::Mat *thresholdFrame(cv::Mat *frame);
 		/**
 			Filters source and saves the result into the destination matrix.
 
@@ -141,7 +142,7 @@ class BallTracker {
 			@param src	Source frame to filter.
 			@param dst	Destination frame to save filtered result into.
 		*/
-		void filterFrame(cv::Mat *src, cv::Mat *dst);
+		void filterFrame(cv::Mat &src, cv::Mat &dst);
 		/**
 			Detects the ball using Hough Circles.
 			@param frame	Frame to look for ball in.
@@ -149,7 +150,7 @@ class BallTracker {
 			@param radius	Pointer to save radius of detected ball.
 			@return true if ball was detected.
 		*/
-        bool detectBall(cv::Mat *frame, cv::Point2i *center, int *radius);
+        bool detectBall(cv::Mat &frame, cv::Point2i &center, int &radius);
 		/**
 			Wrapper for cv::createTrackbar using the _sliderCallbackData structure.
 			@param parameterName Slider name and TrackingParameters name
@@ -177,6 +178,8 @@ class BallTracker {
         CaptureType::Enum captureType;
         std::map<std::string, float> captureProperties;
         TrackingParameters *trackingParameters;
+		cv::Mat erosionKernel;
+		cv::Mat dilationKernel;
 #ifdef USE_BACKGROUND_FILTER
 		cv::Ptr<cv::BackgroundSubtractor> backgroundSubtractor;
 		cv::Mat backgroundMask;

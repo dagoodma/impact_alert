@@ -1,3 +1,4 @@
+#define _USE_MATH_DEFINES // to get M_PI
 #include <iostream>
 #include <stdexcept>
 #include <stdint.h>
@@ -49,13 +50,15 @@ BallTracker::BallTracker(int deviceNum, bool debug, bool debugVerbose, bool trac
 			<< "\tHeight: "<< captureProperties["height"] << std::endl;
         std::cout << "\tMax Width: " << cap.get(cv::CAP_PROP_FRAME_WIDTH) << std::endl;
         std::cout << "\tMax Height: " << cap.get(cv::CAP_PROP_FRAME_HEIGHT) << std::endl;
-        std::cout << "\tMode: " << cap.get(cv::CAP_PROP_MODE) << std::endl;
+        /*
+		std::cout << "\tMode: " << cap.get(cv::CAP_PROP_MODE) << std::endl;
         std::cout << "\tBrightness: " << cap.get(cv::CAP_PROP_BRIGHTNESS) << std::endl;
         std::cout << "\tContrast: " << cap.get(cv::CAP_PROP_CONTRAST) << std::endl;
         std::cout << "\tSaturation: " << cap.get(cv::CAP_PROP_SATURATION) << std::endl;
         std::cout << "\tHue: " << cap.get(cv::CAP_PROP_HUE) << std::endl;
         std::cout << "\tGain: " << cap.get(cv::CAP_PROP_GAIN) << std::endl;
         std::cout << "\tExposure: " << cap.get(cv::CAP_PROP_EXPOSURE) << std::endl;
+		*/
 
         std::cout << "Ball tracker initialized." << std::endl;
     }
@@ -166,6 +169,13 @@ void BallTracker::run() {
 #ifdef USE_BACKGROUND_FILTER
 	backgroundSubtractor = cv::createBackgroundSubtractorMOG2();
 #endif
+	
+	// Build kernels 
+	// TODO move this into function for checkbox/callback
+	erosionKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3,3));
+	dilationKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(8,8));
+	//erosionKernel = cv::Mat();
+	//dilationKernel = cv::Mat();
 
 	// Main loop
 	while (isRunning) {
@@ -183,12 +193,12 @@ void BallTracker::run() {
 		frame.copyTo(frameBall);
 
 		// Process frame
-		filterFrame(&frame, &frameFiltered);
+		filterFrame(frame, frameFiltered);
 		if (trackingEnabled) {
-			foundBall = detectBall(&frameFiltered, &ballCenter, &ballRadius);
+			foundBall = detectBall(frameFiltered, ballCenter, ballRadius);
 
 			if (foundBall) {
-				drawBall(&frameBall,ballCenter,ballRadius);
+				drawBall(frameBall,ballCenter,ballRadius);
 			}
 		}
 
@@ -234,18 +244,20 @@ void BallTracker::run() {
 		else if (key == 13)
 			videoIsPaused = videoIsPaused ^ 1;
 
-		// Video advancing and looping
+		// Advancing to next frame
 		if (isUsingVideo() && !videoIsPaused)
 			wantNextFrame = true;
-		if (isUsingVideo() && wantNextFrame)
+		if (!isUsingImage() && wantNextFrame)
 			frameNumber++;
-		if (frameNumber >= (int)captureProperties["frameCount"]) {
+
+		// Video loops
+		if (isUsingVideo() && frameNumber >= (int)captureProperties["frameCount"]) {
 			frameNumber = 1;
 			cap.release();
 			cap = cv::VideoCapture(fileName);
 		}
 		haveNewFrame = false;
-	}
+	} // while (isRunning())
 
 	if (debug) {
 		trackingParameters->printParameters();
@@ -284,19 +296,19 @@ void BallTracker::createTrackbar(const char* parameterName, const char* windowNa
 		createSliderCallbackData(trackingParameters, parameterName));
 }
 
-void BallTracker::filterFrame(cv::Mat *src, cv::Mat *dst) {
+void BallTracker::filterFrame(cv::Mat &src, cv::Mat &dst) {
 	// Filter with background subtraction
 #ifdef USE_BACKGROUND_FILTER
-	cv::Mat frameGray(src->size(), src->type());
-	cv::cvtColor(*src,frameGray, cv::COLOR_BGR2BGRA);
+	cv::Mat frameGray(src.size(), src.type());
+	cv::cvtColor(src,frameGray, cv::COLOR_BGR2BGRA);
 	backgroundSubtractor->apply(frameGray,backgroundMask,0);
-	*dst = backgroundMask;
+	dst = backgroundMask;
 #endif
 
 	// Filter with HSV thresholds
 #ifdef USE_HSV_FILTER
-	cv::Mat frameHsv(src->size(), src->type());
-	cv::cvtColor(*src,frameHsv, cv::COLOR_BGR2HSV);
+	cv::Mat frameHsv(src.size(), src.type());
+	cv::cvtColor(src,frameHsv, cv::COLOR_BGR2HSV);
 	cv::Scalar hsvRangeLower = cv::Scalar(trackingParameters->getParameter("hueLower"),
 		trackingParameters->getParameter("satLower"),
 		trackingParameters->getParameter("valLower"), 0);
@@ -307,36 +319,40 @@ void BallTracker::filterFrame(cv::Mat *src, cv::Mat *dst) {
 #ifdef USE_BACKGROUND_FILTER // combine filter
 	cv::Mat temp;
 	cv::inRange(frameHsv, hsvRangeLower, hsvRangeUpper, temp);
-	*dst = *dst & temp;
+	dst = dst & temp;
 #else
-	cv::inRange(frameHsv, hsvRangeLower, hsvRangeUpper, *dst);
+	cv::inRange(frameHsv, hsvRangeLower, hsvRangeUpper, dst);
 #endif
 #endif
 
 	// Filter image with dilation, guassian blur, and erosion
-#ifdef USE_BLUR_FILTER
+#ifdef USE_MORPH_FILTER
 	int iterations = trackingParameters->getParameter("filterIterations");
 	for (uint8_t i = 0; i < iterations; i++)
-		cv::dilate(*dst, *dst, cv::Mat()); 
-	cv::GaussianBlur(*dst, *dst, cv::Size(0,0), std::max(trackingParameters->getParameter("filterSigma"),1),
+		cv::dilate(dst, dst, dilationKernel); 
+#ifdef USE_BLUR_FILTER
+	cv::GaussianBlur(dst, dst, cv::Size(0,0), std::max(trackingParameters->getParameter("filterSigma"),1),
 		std::max(trackingParameters->getParameter("filterSigma"),1));
+#endif
 	for (uint8_t i = 0; i < iterations; i++)
-		cv::erode(*dst, *dst, cv::Mat()); 
+		cv::erode(dst, dst, erosionKernel); 
 #endif
 }
 
-bool BallTracker::detectBall(cv::Mat *frame, cv::Point2i *center, int *radius) {
+bool BallTracker::detectBall(cv::Mat &frame, cv::Point2i &center, int &radius) {
+	bool found = false;
+	radius = 0;
+	center.x = 0;
+	center.y = 0;
+
+#ifdef USE_HOUGH_DETECTION
 	std::vector<cv::Vec3f> circles;
-	HoughCircles(*frame, circles, cv::HOUGH_GRADIENT, std::max(trackingParameters->getParameter("houghDP"),1),
+	HoughCircles(frame, circles, cv::HOUGH_GRADIENT, std::max(trackingParameters->getParameter("houghDP"),1),
 		trackingParameters->getParameter("houghMinDist"), std::max(trackingParameters->getParameter("houghThreshUpper"),1),
 		std::max(trackingParameters->getParameter("houghThreshLower"),1), trackingParameters->getParameter("houghMinRadius"),
 		trackingParameters->getParameter("houghMaxRadius"));
 
 	// Find the largest circle
-	*radius = 0;
-	center->x = 0;
-	center->y = 0;
-	bool found = false;
 	float maxRadius = 0.0;
 	float x = 0;
 	float y = 0;
@@ -347,29 +363,67 @@ bool BallTracker::detectBall(cv::Mat *frame, cv::Point2i *center, int *radius) {
 		if (circles[i][2] > maxRadius) {
 			maxRadius = circles[i][2];
 			found = true;
-			center->x = int(x + 0.5f);
-			center->y = int(y + 0.5f);
-			*radius = int(maxRadius + 0.5f);
+			center.x = int(x + 0.5f);
+			center.y = int(y + 0.5f);
+			radius = int(maxRadius + 0.5f);
 		}
 	}
+#else
+	// Contour detection
+	cv::Mat temp;
+	frame.copyTo(temp);
+	std::vector<std::vector<cv::Point>> contours;
+	std::vector<cv::Vec4i> hierarchy;
+
+	cv::findContours(temp,contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
+
+	// Look for largest moment
+	double maxArea = 0.0;
+	float x = 0.0, y = 0.0;
+	int numObjects = hierarchy.size();
+	if (numObjects > trackingParameters->getParameter("contourMaxObjects")) {
+		if (debug)
+			std::cout << "Contour detection found too many objects!" << std::endl;
+	}
+	else if (numObjects > 0) {
+		// Use hierarchy to determine next 
+		for (int i = 0; i >= 0; i = hierarchy[i][0]) {
+		//for (int i = 0; i < numObjects; i++) {
+			cv::Moments moment = cv::moments((cv::Mat)contours[i]);
+			double objectArea = moment.m00;
+			double objectRadius = sqrt(objectArea/M_PI);
+			if (objectArea > trackingParameters->getParameter("contourMinArea")
+				&& objectArea < trackingParameters->getParameter("contourMaxArea")
+				&& objectArea > maxArea) {
+					found = true;
+					maxArea = objectArea;
+					center.x = (int)(moment.m10/objectArea);
+					center.y = (int)(moment.m01/objectArea);
+					radius = (int)objectRadius;
+			}
+
+		}
+	}
+#endif
+
 	return found;
 }
 
 
-void BallTracker::drawBall(cv::Mat *frame, cv::Point2i center, int outerRadius, int innerRadius,
+void BallTracker::drawBall(cv::Mat &frame, cv::Point2i center, int outerRadius, int innerRadius,
 	const cv::Scalar& innerColor, const cv::Scalar& outerColor, const cv::Scalar& crosshairColor) {
 	// Draw circles
-	cv::circle(*frame,center,innerRadius,innerColor,-1);
-	cv::circle(*frame,center,outerRadius,outerColor,1);
+	cv::circle(frame,center,innerRadius,innerColor,-1);
+	cv::circle(frame,center,outerRadius,outerColor,1);
 
 	// Draw crosshairs
 	int crosshairSize = (int)((float)outerRadius*2.2f);
 	int crosshairThickness = 1;
 	int crosshairOffset = crosshairSize/2;
-	cv::line(*frame,cv::Point(center.x - crosshairOffset,center.y),
+	cv::line(frame,cv::Point(center.x - crosshairOffset,center.y),
 		cv::Point(center.x + crosshairOffset,center.y),
 		crosshairColor, crosshairThickness);
-	cv::line(*frame, cv::Point(center.x, center.y - crosshairOffset),
+	cv::line(frame, cv::Point(center.x, center.y - crosshairOffset),
 		cv::Point(center.x, center.y + crosshairOffset),
 		crosshairColor, crosshairThickness);
 
@@ -379,7 +433,7 @@ void BallTracker::drawBall(cv::Mat *frame, cv::Point2i center, int outerRadius, 
 	int textThickness = 1;
 	cv::Scalar textColor(0,255,0);
 	sprintf(buf,"(x: %u, y:%u), %u px",center.x, center.y, outerRadius);
-	cv::putText(*frame, std::string(buf), cv::Point(center.x + outerRadius, center.y + outerRadius),
+	cv::putText(frame, std::string(buf), cv::Point(center.x + outerRadius, center.y + outerRadius),
 		cv::FONT_HERSHEY_PLAIN, textScale, textColor, textThickness);
 }
 

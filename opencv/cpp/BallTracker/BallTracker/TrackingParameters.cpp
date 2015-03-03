@@ -5,7 +5,7 @@
 
 TrackingParameters::TrackingParameters(bool debug, int hueLower, int hueUpper, int satLower, int satUpper, int valLower,
     int valUpper, int filterIterations, int filterSigma, int houghDp, int houghMinDist, int houghThreshLower,
-    int houghThreshUpper, int houghMinRadius, int houghMaxRadius) {
+    int houghThreshUpper, int houghMinRadius, int houghMaxRadius, int contourMaxArea, int contourMinArea, int contourMaxObjects) {
     // Save parameters
     parameters["hueLower"] = hueLower;
     parameters["hueUpper"] = hueUpper;
@@ -21,6 +21,9 @@ TrackingParameters::TrackingParameters(bool debug, int hueLower, int hueUpper, i
     parameters["houghThreshUpper"] = houghThreshUpper;
     parameters["houghMinRadius"] = houghMinRadius;
     parameters["houghMaxRadius"] = houghMaxRadius;
+	parameters["contourMaxArea"] = contourMaxArea;
+	parameters["contourMinArea"] = contourMinArea;
+	parameters["contourMaxObjects"] = contourMaxObjects;
     this->debug = debug;
 	parameterChanged = false;
 }
