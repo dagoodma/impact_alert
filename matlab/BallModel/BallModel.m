@@ -13,12 +13,12 @@ classdef BallModel < handle
         updates; % number of position updates
         update_time % [sec] time difference between P_C and P_Clast
         % Constants
-        C_d = 0.5 % Coefficient of drag
-        rho = 1.183 % [kg/m^3] Density of fluid (air)
-        A = 0.0034 % [m^2] cross-sectional area of ball
-        m = 0.057 % [kg] mass of ball
+        C_d = 0.5; % Coefficient of drag
+        rho = 1.21 % [kg/m^3] Density of fluid (air at ~25degC)
+        S = 0.0034 % [m^2] cross-sectional area of ball
+        m = 0.055 % [kg] mass of ball
         g = 9.8; % [m/s^2] standard gravity of Earth
-        f_s = 50; % [Hz] sample rate for predictions
+        f_s = 500; % [Hz] sample rate for predictions
     end
     
     methods
@@ -66,14 +66,14 @@ classdef BallModel < handle
         
         % Uses a model of the ball to predict nSteps forward in time.
         % Returns a 3xn vector of positions in camera coordinates.
-        function P = predictTrajectory(obj,nSteps)
+        function P = predictTrajectory(obj,nSteps,scaleVelocity)
             X_est = zeros(3,nSteps);
-            C = (obj.rho*obj.A*obj.C_d)/(2*obj.m);
+            C = (obj.rho * obj.S * obj.C_d)/(2*obj.m);
             dt = 1/obj.f_s;
             
             %X_0 = obj.P_Clast; % don't need since we have V already
             X_0 = obj.P_C;
-            Xdot_0 = obj.V_C;
+            Xdot_0 = obj.V_C * scaleVelocity;
             
             for i=1:nSteps
                 Xdot_0_mag = norm(Xdot_0);
@@ -83,7 +83,7 @@ classdef BallModel < handle
                 Xddot_0 = [0 -obj.g 0]' - C*Xdot_0_mag^2*Xdot_0_norm;
                 Xdot_1 = Xdot_0 + dt*Xddot_0;
                 
-                X_1 = X_0 + dt*Xdot_1;
+                X_1 = X_0 + dt*Xdot_1*10;
                 
                 X_est(:,i) = X_1;
                 
