@@ -421,9 +421,9 @@ if __name__ == "__main__":
     #parser = OptionParser("%prog [options] <inputVideoFileOrDevice>")
     #parser.add_option("-o", "--output", dest="output", default=None, help="output video")
     #(opts, args) = parser.parse_args()
-    args = ['../../../video/tennis_ball2-cut.mov'] # movie
+    #args = ['../../../video/tennis_ball2-cut.mov'] # movie
     #args = ['../../../video/tennis_ball2-freeze1.png'] # image
-    #args = [0] # webcam
+    args = [0] # webcam
     if len(args) < 1:
         parser.error("You must give an input video file.")
 

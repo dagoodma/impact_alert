@@ -183,7 +183,7 @@ void BallTracker::run() {
 		}
 		frame.copyTo(frameBall);
 
-		// Process frame
+		// Process frame by filtering and then detecting the ball.
 		filterFrame(frame, frameFiltered);
 		if (trackingEnabled) {
 			foundBall = detectBall(frameFiltered, ballCenter, ballRadius);
@@ -193,7 +193,7 @@ void BallTracker::run() {
 			}
 		}
 
-		// Frame info
+		// Frame info shows in bottom corner of video.
 		if (isUsingVideo()) {
 			double textScale = 0.8f;
 			int textThickness = 1;
@@ -206,7 +206,7 @@ void BallTracker::run() {
 				cv::FONT_HERSHEY_PLAIN, textScale, textColor, textThickness);
 		}
 
-		// Debug info
+		// Debug info prints into console
 		if (debug && (trackingParameters->wasChanged() || haveNewFrame)) {
 			tempBuf[0] = '.'; tempBuf[1] = '\0';
 
@@ -226,13 +226,13 @@ void BallTracker::run() {
 
 		// Get key presses
 		int key = cv::waitKey(1) & 0xFF;
-		if (key == 'q')
+		if (key == 'q') // quits
 			break;
-		else if (key == 'n')
+		else if (key == 'n') // advances to next frame when paused
 			wantNextFrame = true;
 		else if (key == 'p')
-			trackingParameters->printParameters();
-		else if (key == 13)
+			trackingParameters->printParameters(); // pause
+		else if (key == 13) // enter - pauses a video or camera
 			videoIsPaused = videoIsPaused ^ 1;
 
 		// Advancing to next frame
@@ -241,7 +241,7 @@ void BallTracker::run() {
 		if (!isUsingImage() && wantNextFrame)
 			frameNumber++;
 
-		// Video loops
+		// Makes a video loop by releasing and opening a new capture.
 		if (isUsingVideo() && frameNumber >= (int)captureProperties["frameCount"]) {
 			frameNumber = 1;
 			cap.release();
@@ -424,7 +424,7 @@ void BallTracker::drawBall(cv::Mat &frame, cv::Point2i center, int outerRadius, 
 		cv::Point(center.x, center.y + crosshairOffset),
 		crosshairColor, crosshairThickness);
 
-	// Add text
+	// Add text next to ball: (x,y, radius px)
 	char buf[250];
 	double textScale = 0.8f;
 	int textThickness = 1;
