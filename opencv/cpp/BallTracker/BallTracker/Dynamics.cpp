@@ -94,7 +94,7 @@ void Dynamics::Init(double initialSpeed, double initialHeight, double angle, int
 double Dynamics::EstimateDistance(int r)
 {
 	double z;
-	//z = FORESHORTENING_GAIN * exp(-BallRadius / FORESHORTENING_DECAY);//foreshortening
+	//z = FORESHORTENING_GAIN * exp(-r / FORESHORTENING_DECAY);//foreshortening
     // D.G.
     z = FORESHORTENING_A*exp(FORESHORTENING_B*r) + FORESHORTENING_C*exp(FORESHORTENING_D*r);
          

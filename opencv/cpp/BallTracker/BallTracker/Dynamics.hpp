@@ -20,7 +20,10 @@
 #define FORESHORTENING_B -0.1759f //  (-0.245, -0.1069
 #define FORESHORTENING_C 1.7f     //  (0.8402, 2.559)
 #define FORESHORTENING_D -0.0231f //  (-0.03496, -0.01123)
-                       
+
+#define FORESHORTENING_GAIN 2.0f //meter * pixel
+#define FORESHORTENING_DECAY 20.0f // pixel
+
 #define FRAME_RATE 0.033f
 #pragma once
 using namespace std;
