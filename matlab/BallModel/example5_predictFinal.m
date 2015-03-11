@@ -22,8 +22,8 @@ velocityScale = 0.3; % scales estimated velocity
 
 predictTTC = 0.13; % [sec] minimum TTC to decide
 predictMu = @(n) n * 3/4; % mean of trajectory hits in time
-predictVar = 2.5; % variance of trajectory hits in time
-predictThreshold = 0.40; % 40 percent or greater is a hit
+predictVar = 2.3; % variance of trajectory hits in time
+predictThreshold = 0.35; % 40 percent or greater is a hit
 
 
 % Bounding box and plane parameters
