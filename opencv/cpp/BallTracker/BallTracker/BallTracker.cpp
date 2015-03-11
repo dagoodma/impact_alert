@@ -7,6 +7,9 @@
 #include "BallTracker.hpp"
 #include "Utility.hpp"
 
+#include <math.h>
+
+using namespace std;
 // Intialize CaptureType struct names
 const char* CaptureType::names[] = {"camera", "video", "image"};
 
@@ -20,8 +23,9 @@ BallTracker::BallTracker(int deviceNum, bool debug, bool debugVerbose, bool trac
     int camHeight, TrackingParameters *trackingParameters) {
 	isRunning = false;
 	interfaceIsInitialized = false;
-	videoIsPaused = false;
+	videoIsPaused = true;
 	foundBall = false;
+	foundBallAgain = false;
 	ballCenter = cv::Point2i(0,0);
 	ballRadius = 0;
     this->deviceNum = deviceNum;
@@ -33,7 +37,14 @@ BallTracker::BallTracker(int deviceNum, bool debug, bool debugVerbose, bool trac
     captureType = CaptureType::camera;
     this->debug = debug;
     this->debugVerbose = debugVerbose;
-
+	//s.r.
+	SetIntrinsicMatrix();
+	timeToImpact = 9999;
+	timeToFlyBy = 9999;
+	ballVelocity = 0;
+	ballVerticalAngle = 0;
+	ballHorizontalAngle = 0;
+	diffBetweenTracks=-1;
     // Open the capture
     cap = cv::VideoCapture(this->deviceNum);
     if (!cap.isOpened())
@@ -68,9 +79,11 @@ BallTracker::BallTracker(std::string fileName, bool debug, bool debugVerbose, bo
     bool startVideoPaused, TrackingParameters *trackingParameters) {
 	isRunning = false;
 	frameNumber = 1;
+	frameNumberPrevTrack = 10000;//s.r.
 	interfaceIsInitialized = false;
 	videoIsPaused = false;
 	foundBall = false;
+	foundBallAgain = false;
     this->fileName = fileName;
     trackingEnabled = trackBall;
     videoIsPaused = startVideoPaused;
@@ -79,7 +92,15 @@ BallTracker::BallTracker(std::string fileName, bool debug, bool debugVerbose, bo
     captureType = CaptureType::video;
     this->debug = debug;
     this->debugVerbose = debugVerbose;
+	SetIntrinsicMatrix();
+	//s.r.
+	timeToImpact = 9999;
+	timeToFlyBy = 9999;
 
+	ballVelocity = 0;
+	ballVerticalAngle = 0;
+	ballHorizontalAngle = 0;
+	diffBetweenTracks=-1;
     // Check if we have an image file using the file extension
     std::string fileNameExt = fileName.substr(fileName.find_last_of(".") + 1);
     if (std::find(imageFileExtensionList.begin(), imageFileExtensionList.end(),
@@ -88,9 +109,22 @@ BallTracker::BallTracker(std::string fileName, bool debug, bool debugVerbose, bo
     }
 
     // Open the capture
-    cap = cv::VideoCapture(this->fileName);
+    
+	cap.open(fileName);
+	
     if (!cap.isOpened())
 		throw std::runtime_error("Failed to capture from file");
+	//initial Dynamics object
+	
+	double initialSpeed = 10;
+	double initialHeight = 1;
+	double angle = 30;
+	
+	BallDynamics = new Dynamics(initialSpeed,initialHeight,angle);
+	/*BallDynamics->runSimulation();///couple of tests
+	BallDynamics->runSimulation();
+	BallDynamics->Init(initialSpeed,initialHeight,angle);
+	BallDynamics->runSimulation();*/
 
     // Get capture properties
     captureProperties["width"] = (float)cap.get(cv::CAP_PROP_FRAME_WIDTH);
@@ -143,7 +177,72 @@ int BallTracker::getHeight() {
 	return (int)captureProperties["height"];
 }
 
+void BallTracker::SetIntrinsicMatrix()
+{
 
+	intrisicMat.create(3, 3, cv::DataType<double>::type);
+
+	intrisicMat.at<double>(0, 0) = FOCAL_LENGTH;
+	intrisicMat.at<double>(1, 0) = 0;
+	intrisicMat.at<double>(2, 0) = 0;
+
+	intrisicMat.at<double>(0, 1) = 0;
+	intrisicMat.at<double>(1, 1) = FOCAL_LENGTH;
+	intrisicMat.at<double>(2, 1) = 0;
+
+	intrisicMat.at<double>(0, 2) = 0;
+	intrisicMat.at<double>(1, 2) = 0;
+	intrisicMat.at<double>(2, 2) = 1;
+
+	rVec.create(3, 1, cv::DataType<double>::type);
+	rVec.at<double>(0) = 0;
+	rVec.at<double>(1) = 0;
+	rVec.at<double>(2) = 0;
+
+	tVec.create(3, 1, cv::DataType<double>::type);
+	tVec.at<double>(0) = 0.0088;
+	tVec.at<double>(1) = -0.0019;
+	tVec.at<double>(2) = 0;
+
+	distCoeffs.create(5, 1, cv::DataType<double>::type);
+	distCoeffs.at<double>(0) = 0;
+	distCoeffs.at<double>(1) = 0;
+	distCoeffs.at<double>(2) = 0;
+	distCoeffs.at<double>(3) = 0;
+	distCoeffs.at<double>(4) = 0;
+
+	/*intrisicMat.at<double>(0, 0) = 1.6415318549788924e+003;
+	intrisicMat.at<double>(1, 0) = 0;
+	intrisicMat.at<double>(2, 0) = 0;
+
+	intrisicMat.at<double>(0, 1) = 0;
+	intrisicMat.at<double>(1, 1) = 1.7067753507885654e+003;
+	intrisicMat.at<double>(2, 1) = 0;
+
+	intrisicMat.at<double>(0, 2) = 5.3262822453148601e+002;
+	intrisicMat.at<double>(1, 2) = 3.8095355839052968e+002;
+	intrisicMat.at<double>(2, 2) = 1;
+
+	rVec.create(3, 1, cv::DataType<double>::type);
+	rVec.at<double>(0) = -3.9277902400761393e-002;
+	rVec.at<double>(1) = 3.7803824407602084e-002;
+	rVec.at<double>(2) = 2.6445674487856268e-002;
+
+	tVec.create(3, 1, cv::DataType<double>::type);
+	tVec.at<double>(0) = 2.1158489381208221e+000;
+	tVec.at<double>(1) = -7.6847683212704716e+000;
+	tVec.at<double>(2) = 2.6169795190294256e+001;
+
+	distCoeffs.create(5, 1, cv::DataType<double>::type);
+	distCoeffs.at<double>(0) = -7.9134632415085826e-001;
+	distCoeffs.at<double>(1) = 1.5623584435644169e+000;
+	distCoeffs.at<double>(2) = -3.3916502741726508e-002;
+	distCoeffs.at<double>(3) = -1.3921577146136694e-002;
+	distCoeffs.at<double>(4) = 1.1430734623697941e+002;*/
+
+
+
+}
 void BallTracker::run() {
 	if (! cap.isOpened())
 		return;
@@ -151,6 +250,7 @@ void BallTracker::run() {
 	if (! interfaceIsInitialized)
 		initializeInterface();
 
+	frameNumber = 1;
 	bool isRunning = true;
 	bool wantNextFrame = true; // want a new frame
 	bool haveNewFrame = false; // new frame read
@@ -183,17 +283,51 @@ void BallTracker::run() {
 		}
 		frame.copyTo(frameBall);
 
-		// Process frame by filtering and then detecting the ball.
+		// Process frame
 		filterFrame(frame, frameFiltered);
 		if (trackingEnabled) {
 			foundBall = detectBall(frameFiltered, ballCenter, ballRadius);
 
 			if (foundBall) {
 				drawBall(frameBall,ballCenter,ballRadius);
+
+				//s.r.
+				diffBetweenTracks = frameNumber-frameNumberPrevTrack;
+				if (foundBall && (diffBetweenTracks)>0)//check time history between tracks
+				{
+				//work with couple of tracks
+
+					BallDynamics->EstimateVelocityComponents(ballCenter, ballCenterPrevTrack,ballRadius, ballRadiusPrevTrack, ballVelocity, ballVerticalAngle ,ballHorizontalAngle,diffBetweenTracks);
+					BallDynamics->Init(ballVelocity, ballCenter.y, ballVerticalAngle, ballRadius);
+
+					//test Only
+					//BallDynamics->SetIdealPath();
+					
+					if(!_isnan(ballVerticalAngle))
+					{
+						BallDynamics->runSimulation();
+						// Read 3D points
+						std::vector<cv::Point3d> objectPoints = Generate3DPoints();
+
+						drawPredictedTrajectory(objectPoints, ballCenter.x, ballCenter.y, frameBall);
+						drawTimes(frameBall);
+
+					}
+					else
+						cout << "vertical angle estimation out of limit" << endl;
+				}
+				else
+				{
+					frameNumberPrevTrack = frameNumber;
+					ballCenterPrevTrack = ballCenter;
+					ballRadiusPrevTrack = ballRadius;
+				}
+				
+
 			}
 		}
 
-		// Frame info shows in bottom corner of video.
+		// Frame info
 		if (isUsingVideo()) {
 			double textScale = 0.8f;
 			int textThickness = 1;
@@ -206,7 +340,7 @@ void BallTracker::run() {
 				cv::FONT_HERSHEY_PLAIN, textScale, textColor, textThickness);
 		}
 
-		// Debug info prints into console
+		// Debug info
 		if (debug && (trackingParameters->wasChanged() || haveNewFrame)) {
 			tempBuf[0] = '.'; tempBuf[1] = '\0';
 
@@ -226,13 +360,13 @@ void BallTracker::run() {
 
 		// Get key presses
 		int key = cv::waitKey(1) & 0xFF;
-		if (key == 'q') // quits
+		if (key == 'q')
 			break;
-		else if (key == 'n') // advances to next frame when paused
+		else if (key == 'n')
 			wantNextFrame = true;
 		else if (key == 'p')
-			trackingParameters->printParameters(); // pause
-		else if (key == 13) // enter - pauses a video or camera
+			trackingParameters->printParameters();
+		else if (key == 13)
 			videoIsPaused = videoIsPaused ^ 1;
 
 		// Advancing to next frame
@@ -241,7 +375,7 @@ void BallTracker::run() {
 		if (!isUsingImage() && wantNextFrame)
 			frameNumber++;
 
-		// Makes a video loop by releasing and opening a new capture.
+		// Video loops
 		if (isUsingVideo() && frameNumber >= (int)captureProperties["frameCount"]) {
 			frameNumber = 1;
 			cap.release();
@@ -320,20 +454,19 @@ void BallTracker::filterFrame(cv::Mat &src, cv::Mat &dst) {
 	// Filter image with dilation, guassian blur, and erosion
 	int iterations = trackingParameters->getParameter("filterIterations");
 	int kernelSize = trackingParameters->getParameter("filterKernelSize");
+	cv::Mat kernel = cv::getStructuringElement(trackingParameters->getParameter("filterKernel"), cv::Size(kernelSize,kernelSize));
+	// Dilate
+	for (uint8_t i = 0; i < iterations; i++)
+		cv::dilate(dst, dst, kernel); 
 
-	
 	// Gaussian blur if enabled
 	if (trackingParameters->getParameter("filterBlurOn"))
 		cv::GaussianBlur(dst, dst, cv::Size(0,0), std::max(trackingParameters->getParameter("filterSigma"),1),
 			std::max(trackingParameters->getParameter("filterSigma"),1));
-	
-	// Dilate and Erode
-	cv::Mat kernel = cv::getStructuringElement(trackingParameters->getParameter("filterKernel"), cv::Size(kernelSize,kernelSize));
+
+	// Erode
 	for (uint8_t i = 0; i < iterations; i++)
 		cv::erode(dst, dst, kernel); 
-	for (uint8_t i = 0; i < iterations; i++)
-		cv::dilate(dst, dst, kernel); 
-
 }
 
 bool BallTracker::detectBall(cv::Mat &frame, cv::Point2i &center, int &radius) {
@@ -411,22 +544,21 @@ bool BallTracker::detectBall(cv::Mat &frame, cv::Point2i &center, int &radius) {
 void BallTracker::drawBall(cv::Mat &frame, cv::Point2i center, int outerRadius, int innerRadius,
 	const cv::Scalar& innerColor, const cv::Scalar& outerColor, const cv::Scalar& crosshairColor) {
 	// Draw circles
+	cv::circle(frame,center,innerRadius,innerColor,-1);
 	cv::circle(frame,center,outerRadius,outerColor,1);
 
-	// Draw crosshairs and inner dot if ball is large enough
-	if (outerRadius > 7) { 
-		cv::circle(frame,center,innerRadius,innerColor,-1); // draw inner dot
-		int crosshairSize = (int)((float)outerRadius*2.2f);
-		int crosshairThickness = 1;
-		int crosshairOffset = crosshairSize/2;
-		cv::line(frame,cv::Point(center.x - crosshairOffset,center.y),
-			cv::Point(center.x + crosshairOffset,center.y),
-			crosshairColor, crosshairThickness);
-		cv::line(frame, cv::Point(center.x, center.y - crosshairOffset),
-			cv::Point(center.x, center.y + crosshairOffset),
-			crosshairColor, crosshairThickness);
-	}
-	// Add text next to ball: (x,y, radius px)
+	// Draw crosshairs
+	int crosshairSize = (int)((float)outerRadius*2.2f);
+	int crosshairThickness = 1;
+	int crosshairOffset = crosshairSize/2;
+	cv::line(frame,cv::Point(center.x - crosshairOffset,center.y),
+		cv::Point(center.x + crosshairOffset,center.y),
+		crosshairColor, crosshairThickness);
+	cv::line(frame, cv::Point(center.x, center.y - crosshairOffset),
+		cv::Point(center.x, center.y + crosshairOffset),
+		crosshairColor, crosshairThickness);
+
+	// Add text
 	char buf[250];
 	double textScale = 0.8f;
 	int textThickness = 1;
@@ -434,6 +566,108 @@ void BallTracker::drawBall(cv::Mat &frame, cv::Point2i center, int outerRadius, 
 	sprintf(buf,"(x: %u, y:%u), %u px",center.x, center.y, outerRadius);
 	cv::putText(frame, std::string(buf), cv::Point(center.x + outerRadius, center.y + outerRadius),
 		cv::FONT_HERSHEY_PLAIN, textScale, textColor, textThickness);
+}
+
+
+
+std::vector<cv::Point3d> BallTracker::Generate3DPoints()
+{
+	std::vector<cv::Point3d> points;
+
+	double x, y, z;
+	double y0 = BallDynamics->height[0];
+	double z0 = BallDynamics->z[0];
+	double x0 = BallDynamics->x[0];
+	int sz = BallDynamics->x.size();
+	for (unsigned int i = 0; i < sz; ++i)
+	{
+		
+		//x = BallDynamics->x[i]; 
+
+		if (BallDynamics->x[i] > x0)
+		{
+			x = x0 - fabs(BallDynamics->x[i] - x0);
+		}
+		else
+			x = x0 + fabs(BallDynamics->x[i] - x0);
+
+		if (BallDynamics->height[i] > y0)
+		{
+			y = y0 - fabs(BallDynamics->height[i] - y0);
+		}
+		else
+			y = y0 + fabs(BallDynamics->height[i] - y0);
+
+		//x = BallDynamics->z[i];// transfomation with camera and trajectory coordinate system
+		//z = BallDynamics->x[i];// transfomation with camera and trajectory coordinate system
+
+
+		if (BallDynamics->z[i] > z0)
+		{
+			z = z0 - fabs(BallDynamics->z[i] - z0);
+		}
+		else
+			z = z0 + fabs(BallDynamics->z[i] - z0);
+		
+		
+		if (z<0 || x<0 || y<0)
+			break;
+		points.push_back(cv::Point3d(x, y, z));
+	}
+
+	return points;
+}
+void BallTracker::drawTimes(Mat &frame){
+
+	
+		if(this->BallDynamics->m_timeToImpact<timeToImpact)
+			timeToImpact = this->BallDynamics->m_timeToImpact;
+		else
+			timeToImpact-=diffBetweenTracks*FRAME_RATE;
+	
+		if(this->BallDynamics->m_timeToFlyBy<timeToFlyBy)
+			timeToFlyBy = this->BallDynamics->m_timeToFlyBy;
+		else
+			timeToFlyBy-=diffBetweenTracks*FRAME_RATE;
+		
+		if(timeToImpact<0)
+			timeToImpact = 9999;
+		
+		if(timeToFlyBy<0)
+			timeToFlyBy = 9999;
+	
+	putText(frame,"Time To FlyBy = "+utility::dblToString(timeToFlyBy)+"[s]   Time To Impact = "+utility::dblToString(timeToImpact)+"[s]   ",Point(100,150),1,1,Scalar(0,255,0),2);
+
+}
+void BallTracker::drawPredictedTrajectory(std::vector<cv::Point3d> points, int x, int y, Mat &frame)
+{
+
+	//cv::Mat imageToDraw; //this is your image to draw, don't forget to load it
+	//std::vector<cv::Point> pointsInLast20Frames; //fill this vector with points, they should be ordered
+	cv::Scalar color(0, 0, 255); //red
+	std::vector<cv::Point2d> imagePoints;
+	std::vector<cv::Point2d> imagePointsPlot;
+
+	cv::Mat invert_intrisicMat(3, 3, cv::DataType<double>::type); // Intrisic matrix
+	//cv::invert(intrisicMat, invert_intrisicMat);
+
+	cv::projectPoints(points, rVec, tVec, intrisicMat, distCoeffs, imagePoints);
+	
+	int sz = points.size() - 1;
+	for (int i = 1; i < sz; ++i)
+	{
+		int px= this->BallDynamics->EstimateImageCoord( points[i-1].x,points[i-1].z);
+		int py= this->BallDynamics->EstimateImageCoord( points[i-1].y,points[i-1].z);
+
+		
+
+		cv::line(frame, imagePoints[i], imagePoints[i+1], color);
+		
+
+	}
+
+	//cv::line(frame, Point(x1, y1),Point(x2, y2), color);
+
 }
 
 /*----------------------- Non-member Functions ------------------------*/
