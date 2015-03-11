@@ -11,18 +11,11 @@
 
 // Include local libraries
 #include "TrackingParameters.hpp"
-#include "Dynamics.h"
+#include "Dynamics.hpp"
 
 // Default camera width and height
 #define DEFAULT_CAM_WIDTH   640
 #define DEFAULT_CAM_HEIGHT  480
-
-// Filter methods (moved to parameter struct)
-#define USE_BACKGROUND_FILTER // Gaussian filter
-#define USE_HSV_FILTER	  // HSV range filter
-#define USE_MORPH_FILTER	// morphology (erosion and dilation) filter
-#define USE_BLUR_FILTER	      // Gaussian blur
-#define USE_HOUGH_DETECTION // uses HoughCircle detection, or contour detection if not
 
 /**
 	Slider callback data contains a pointer to the TrackingParameters instance,
@@ -136,11 +129,6 @@ private:
 			const cv::Scalar& crosshairColor=cv::Scalar(255,160,160));
 		/**
 			Filters source and saves the result into the destination matrix.
-
-			Filtering techniques are defined by the macro definitions: USE_BACKGROUND_FILTER,
-			USE_HSV_FILTER, and USE_BLUR_FILTER. Defining these causes the source frame to
-			be filtered by MOG2 background subtraction, HSV threshold range,
-			and blurring respectively. USE_BLUR_FILTER cannot be used alone.
 			@param src	Source frame to filter.
 			@param dst	Destination frame to save filtered result into.
 		*/
@@ -161,6 +149,11 @@ private:
 			@todo add minimum value
 		*/
 		void createTrackbar(const char* parameterName, const char* windowName, int maxValue);
+		void setIntrinsicMatrix();
+		void setDistortianCoeffs();
+		std::vector<cv::Point3d> generate3DPoints();
+        cv::Point3d BallTracker::convertPixelToCameraCoordinate(cv::Point2d pointPixel);
+        cv::Point2d BallTracker::convertCameraToPixelCoordinate(cv::Point3d pointCamera);
         // Attributes
 		int tempInt;
 		char tempBuf[250];
@@ -185,12 +178,8 @@ private:
         CaptureType::Enum captureType;
         std::map<std::string, float> captureProperties;
         TrackingParameters *trackingParameters;
-#ifdef USE_BACKGROUND_FILTER
 		cv::Ptr<cv::BackgroundSubtractor> backgroundSubtractor;
 		cv::Mat backgroundMask;
-#endif
-		void BallTracker::SetIntrinsicMatrix();
-		std::vector<cv::Point3d> BallTracker::Generate3DPoints();
 
 		void drawTimes(Mat &frame);
 
@@ -201,11 +190,9 @@ private:
 		int diffBetweenTracks;
 
 
-		cv::Mat intrisicMat; // Intrisic matrix - (3, 3, cv::DataType<double>::type)
-		cv::Mat invert_intrisicMat; // Intrisic matrix - (3, 3, cv::DataType<double>::type)
-		cv::Mat rVec; // Rotation vector - (3, 1, cv::DataType<double>::type)
-		cv::Mat tVec; // Translation vector - (3, 1, cv::DataType<double>::type)
-		cv::Mat distCoeffs;   // Distortion vector - (5, 1, cv::DataType<double>::type)
+		cv::Mat intrinsicMat; // Camera matrix, K
+		cv::Mat invert_intrinsicMat; // M
+		cv::Mat distortionCoeffs; // Distortion k1, k2, p1, p2, k3
 		
 		double timeToImpact ;
 		double timeToFlyBy;

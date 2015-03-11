@@ -1,4 +1,4 @@
-#include "Dynamics.h"
+#include "Dynamics.hpp"
 
 
 //----------------------------CONSTRUCTOR-----------------------------------
@@ -91,11 +91,13 @@ void Dynamics::Init(double initialSpeed, double initialHeight, double angle, int
 	iteration++;	
 
 }
-double Dynamics::EstimateDistance(int BallRadius)
+double Dynamics::EstimateDistance(int r)
 {
 	double z;
-	z = FORESHORTENING_GAIN * exp(-BallRadius / FORESHORTENING_DECAY);//foreshortening
-
+	//z = FORESHORTENING_GAIN * exp(-BallRadius / FORESHORTENING_DECAY);//foreshortening
+    // D.G.
+    z = FORESHORTENING_A*exp(FORESHORTENING_B*r) + FORESHORTENING_C*exp(FORESHORTENING_D*r);
+         
 	return z;
 
 }
@@ -117,7 +119,7 @@ int Dynamics::EstimateImageCoord(double p,double pz)
 	return pixel;
 }
 
-void Dynamics::EstimateVelocityComponents(cv::Point2i currentPnt, cv::Point2i prevPnt,int currentBallRadius, int prevBallRadius, double &V, double &verticalAngle ,double &horizontalAngle,unsigned int diffBetweenTracks)
+void Dynamics::EstimateVelocityComponents(cv::Point3d currentPnt, cv::Point3d prevPnt,int currentBallRadius, int prevBallRadius, double &V, double &verticalAngle ,double &horizontalAngle,unsigned int diffBetweenTracks)
 {
 
 	double dt12 = diffBetweenTracks*FRAME_RATE;  // difference time between succssive frames of the tracked object
@@ -130,29 +132,19 @@ void Dynamics::EstimateVelocityComponents(cv::Point2i currentPnt, cv::Point2i pr
 	double Vxz;//velocity in horizontal plane
 	double factor1 = 1;
 
-
-	// points in image coordinates
-	int x1 = currentPnt.x;
-	int x2 = prevPnt.x;
-
-	int y1 = currentPnt.y;
-	int y2 = prevPnt.y;
-
-	int z1 = currentBallRadius;
-	int z2 = prevBallRadius;
-
-	double px1, py1, pz1;//unit in in meters 
-	double px2, py2, pz2;//unit in in meters 
+	double px1 = currentPnt.x, py1 = currentPnt.y, pz1 = currentPnt.z;//unit in in meters 
+	double px2 = prevPnt.x, py2 = prevPnt.y, pz2 = prevPnt.z;//unit in in meters 
 
 	pz1 = EstimateDistance(currentBallRadius);// 4.0 * exp(-currentBallRadius / 20.0);//foreshortening
 	pz2 = EstimateDistance(prevBallRadius);// 4.0 * exp(-prevBallRadius / 20.0);//foreshortening
 
 
 	//TODO change to intrinsic matrix
-	px1 = EstimateCameraCoord(x1, pz1);// x1 / focus*pz1;
-	px2 = EstimateCameraCoord(x2, pz2);//x2 / focus*pz2;
-	py1 = EstimateCameraCoord(y1, pz1);//y1 / focus*pz1;
-	py2 = EstimateCameraCoord(y2, pz2);//y2 / focus*pz2;
+	//px1 = EstimateCameraCoord(x1, pz1);// x1 / focus*pz1;
+	//px2 = EstimateCameraCoord(x2, pz2);//x2 / focus*pz2;
+	//py1 = EstimateCameraCoord(y1, pz1);//y1 / focus*pz1;
+	//py2 = EstimateCameraCoord(y2, pz2);//y2 / focus*pz2;
+
 
 
 	Vz2 = pow((float)(pz1 - pz2) / dt12, 2);	//  velocity through principal axes

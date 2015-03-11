@@ -14,8 +14,13 @@
 #define DEG2RAD M_PI/180.0
 
 #define FOCAL_LENGTH 1600.0f
-#define FORESHORTENING_GAIN 2.0f //meter * pixel
-#define FORESHORTENING_DECAY 20.0f // pixel
+
+// Foreshortening coefficients (with 95% confidence bounds):
+#define FORESHORTENING_A 7.479f   // (5.066, 9.892)
+#define FORESHORTENING_B -0.1759f //  (-0.245, -0.1069
+#define FORESHORTENING_C 1.7f     //  (0.8402, 2.559)
+#define FORESHORTENING_D -0.0231f //  (-0.03496, -0.01123)
+                       
 #define FRAME_RATE 0.033f
 #pragma once
 using namespace std;
@@ -31,8 +36,8 @@ public:
 	void calculateAirResistance();
 	bool onlyCalculateIdealPath();
 	void Init(double initialSpeed, double initialHeight, double angle, int BallRadius);
-	void EstimateVelocityComponents(cv::Point2i currentPnt, cv::Point2i prevPnt,int currentBallRadius, int prevBallRadius, double &V, double &verticalAngle ,double &horizontalAngle,unsigned int diffBetweenTracks);
-	double EstimateDistance(int BallRadius);
+	void EstimateVelocityComponents(cv::Point3d currentPnt, cv::Point3d prevPnt,int currentBallRadius, int prevBallRadius, double &V, double &verticalAngle ,double &horizontalAngle,unsigned int diffBetweenTracks);
+	double EstimateDistance(int r);
 	double EstimateCameraCoord(int pixel, double pz);
 	int EstimateImageCoord(double p,double pz);
 

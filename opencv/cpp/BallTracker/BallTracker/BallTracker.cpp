@@ -38,7 +38,8 @@ BallTracker::BallTracker(int deviceNum, bool debug, bool debugVerbose, bool trac
     this->debug = debug;
     this->debugVerbose = debugVerbose;
 	//s.r.
-	SetIntrinsicMatrix();
+	setIntrinsicMatrix();
+    setDistortianCoeffs();
 	timeToImpact = 9999;
 	timeToFlyBy = 9999;
 	ballVelocity = 0;
@@ -92,7 +93,8 @@ BallTracker::BallTracker(std::string fileName, bool debug, bool debugVerbose, bo
     captureType = CaptureType::video;
     this->debug = debug;
     this->debugVerbose = debugVerbose;
-	SetIntrinsicMatrix();
+	setIntrinsicMatrix();
+    setDistortianCoeffs();
 	//s.r.
 	timeToImpact = 9999;
 	timeToFlyBy = 9999;
@@ -177,72 +179,43 @@ int BallTracker::getHeight() {
 	return (int)captureProperties["height"];
 }
 
-void BallTracker::SetIntrinsicMatrix()
+void BallTracker::setIntrinsicMatrix()
 {
 
-	intrisicMat.create(3, 3, cv::DataType<double>::type);
+	intrinsicMat.create(3, 3, cv::DataType<double>::type);
 
-	intrisicMat.at<double>(0, 0) = FOCAL_LENGTH;
-	intrisicMat.at<double>(1, 0) = 0;
-	intrisicMat.at<double>(2, 0) = 0;
+	intrinsicMat.at<double>(0, 0) = 6.8565699875178950e+002;
+	intrinsicMat.at<double>(0, 1) = 0;
+	intrinsicMat.at<double>(0, 2) = 3.1950000000000000e+002;
 
-	intrisicMat.at<double>(0, 1) = 0;
-	intrisicMat.at<double>(1, 1) = FOCAL_LENGTH;
-	intrisicMat.at<double>(2, 1) = 0;
+	intrinsicMat.at<double>(1, 0) = 0;
+	intrinsicMat.at<double>(1, 1) = 6.8565699875178950e+002;
+	intrinsicMat.at<double>(1, 2) = 2.3950000000000000e+002;
 
-	intrisicMat.at<double>(0, 2) = 0;
-	intrisicMat.at<double>(1, 2) = 0;
-	intrisicMat.at<double>(2, 2) = 1;
+	intrinsicMat.at<double>(2, 0) = 0;
+	intrinsicMat.at<double>(2, 1) = 0;
+	intrinsicMat.at<double>(2, 2) = 1;
 
-	rVec.create(3, 1, cv::DataType<double>::type);
-	rVec.at<double>(0) = 0;
-	rVec.at<double>(1) = 0;
-	rVec.at<double>(2) = 0;
-
-	tVec.create(3, 1, cv::DataType<double>::type);
-	tVec.at<double>(0) = 0.0088;
-	tVec.at<double>(1) = -0.0019;
-	tVec.at<double>(2) = 0;
-
-	distCoeffs.create(5, 1, cv::DataType<double>::type);
-	distCoeffs.at<double>(0) = 0;
-	distCoeffs.at<double>(1) = 0;
-	distCoeffs.at<double>(2) = 0;
-	distCoeffs.at<double>(3) = 0;
-	distCoeffs.at<double>(4) = 0;
-
-	/*intrisicMat.at<double>(0, 0) = 1.6415318549788924e+003;
-	intrisicMat.at<double>(1, 0) = 0;
-	intrisicMat.at<double>(2, 0) = 0;
-
-	intrisicMat.at<double>(0, 1) = 0;
-	intrisicMat.at<double>(1, 1) = 1.7067753507885654e+003;
-	intrisicMat.at<double>(2, 1) = 0;
-
-	intrisicMat.at<double>(0, 2) = 5.3262822453148601e+002;
-	intrisicMat.at<double>(1, 2) = 3.8095355839052968e+002;
-	intrisicMat.at<double>(2, 2) = 1;
-
-	rVec.create(3, 1, cv::DataType<double>::type);
-	rVec.at<double>(0) = -3.9277902400761393e-002;
-	rVec.at<double>(1) = 3.7803824407602084e-002;
-	rVec.at<double>(2) = 2.6445674487856268e-002;
-
-	tVec.create(3, 1, cv::DataType<double>::type);
-	tVec.at<double>(0) = 2.1158489381208221e+000;
-	tVec.at<double>(1) = -7.6847683212704716e+000;
-	tVec.at<double>(2) = 2.6169795190294256e+001;
-
-	distCoeffs.create(5, 1, cv::DataType<double>::type);
-	distCoeffs.at<double>(0) = -7.9134632415085826e-001;
-	distCoeffs.at<double>(1) = 1.5623584435644169e+000;
-	distCoeffs.at<double>(2) = -3.3916502741726508e-002;
-	distCoeffs.at<double>(3) = -1.3921577146136694e-002;
-	distCoeffs.at<double>(4) = 1.1430734623697941e+002;*/
-
-
-
+    invert_intrinsicMat = intrinsicMat.inv();
 }
+void BallTracker::setDistortianCoeffs()
+{
+    distortionCoeffs.create(1,5, cv::DataType<double>::type);
+
+   /* distortionCoeffs.at<double>(0,0) = 5.3812856869397713e-002;
+    distortionCoeffs.at<double>(0,1) = -8.5346004936044162e-001;
+    distortionCoeffs.at<double>(0,2) = 0;
+    distortionCoeffs.at<double>(0,3) = 0;
+    distortionCoeffs.at<double>(0,4) = 4.2381277624377436e+000;*/
+	distortionCoeffs.at<double>(0,0) = 0;
+    distortionCoeffs.at<double>(0,1) = 0;
+    distortionCoeffs.at<double>(0,2) = 0;
+    distortionCoeffs.at<double>(0,3) = 0;
+    distortionCoeffs.at<double>(0,4) = 0;
+}
+
+
+
 void BallTracker::run() {
 	if (! cap.isOpened())
 		return;
@@ -296,8 +269,9 @@ void BallTracker::run() {
 				if (foundBall && (diffBetweenTracks)>0)//check time history between tracks
 				{
 				//work with couple of tracks
-
-					BallDynamics->EstimateVelocityComponents(ballCenter, ballCenterPrevTrack,ballRadius, ballRadiusPrevTrack, ballVelocity, ballVerticalAngle ,ballHorizontalAngle,diffBetweenTracks);
+                    cv::Point3d pointCamera = convertPixelToCameraCoordinate(ballCenter);
+                    cv::Point3d pointPrevCamera = convertPixelToCameraCoordinate(ballCenterPrevTrack);
+					BallDynamics->EstimateVelocityComponents(pointCamera, pointPrevCamera,ballRadius, ballRadiusPrevTrack, ballVelocity, ballVerticalAngle ,ballHorizontalAngle,diffBetweenTracks);
 					BallDynamics->Init(ballVelocity, ballCenter.y, ballVerticalAngle, ballRadius);
 
 					//test Only
@@ -307,7 +281,7 @@ void BallTracker::run() {
 					{
 						BallDynamics->runSimulation();
 						// Read 3D points
-						std::vector<cv::Point3d> objectPoints = Generate3DPoints();
+						std::vector<cv::Point3d> objectPoints = generate3DPoints();
 
 						drawPredictedTrajectory(objectPoints, ballCenter.x, ballCenter.y, frameBall);
 						drawTimes(frameBall);
@@ -569,8 +543,28 @@ void BallTracker::drawBall(cv::Mat &frame, cv::Point2i center, int outerRadius, 
 }
 
 
+cv::Point3d BallTracker::convertPixelToCameraCoordinate(cv::Point2d pointPixel)
+{
+    cv::Mat Xs = (cv::Mat_<double>(3,1) << pointPixel.x, pointPixel.y, 1);
+    cv::Mat Xc = this->invert_intrinsicMat * Xs;
+    cv::Point3d pointCamera(Xc.at<double>(0,0), Xc.at<double>(1,0), Xc.at<double>(2,0));
 
-std::vector<cv::Point3d> BallTracker::Generate3DPoints()
+    return pointCamera;
+}
+
+cv::Point2d BallTracker::convertCameraToPixelCoordinate(cv::Point3d pointCamera)
+{
+    cv::Mat Xc = (cv::Mat_<double>(3,1) << pointCamera.x, pointCamera.y, pointCamera.z);
+    cv::Mat Xs = this->intrinsicMat * Xc;
+    double Xs_z = Xs.at<double>(2,0);
+    cv::Point2d pointPixel(Xs.at<double>(0,0)/Xs_z, Xs.at<double>(1,0)/Xs_z);
+
+    return pointPixel;
+}
+
+
+
+std::vector<cv::Point3d> BallTracker::generate3DPoints()
 {
 	std::vector<cv::Point3d> points;
 
@@ -648,10 +642,18 @@ void BallTracker::drawPredictedTrajectory(std::vector<cv::Point3d> points, int x
 	std::vector<cv::Point2d> imagePoints;
 	std::vector<cv::Point2d> imagePointsPlot;
 
-	cv::Mat invert_intrisicMat(3, 3, cv::DataType<double>::type); // Intrisic matrix
-	//cv::invert(intrisicMat, invert_intrisicMat);
+	//cv::projectPoints(points, NULL, NULL, intrinsicMat, distortionCoeffs, imagePoints);
+	
+    cv::Mat rVec(3, 1, cv::DataType<double>::type);
+    rVec.at<double>(0) = 0;
+    rVec.at<double>(1) = 0;
+    rVec.at<double>(2) = 0;
 
-	cv::projectPoints(points, rVec, tVec, intrisicMat, distCoeffs, imagePoints);
+    cv::Mat tVec(3, 1, cv::DataType<double>::type);
+    tVec.at<double>(0) = 0;
+    tVec.at<double>(1) = 0;
+    tVec.at<double>(2) = 0;
+	cv::projectPoints(points, rVec, tVec, intrinsicMat, distortionCoeffs, imagePoints);
 	
 	int sz = points.size() - 1;
 	for (int i = 1; i < sz; ++i)

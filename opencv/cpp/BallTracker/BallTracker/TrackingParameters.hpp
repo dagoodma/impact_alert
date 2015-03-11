@@ -43,17 +43,17 @@
 //#define DEFAULT_HOUGH_MAX_RADIUS    140
 
 // Default with HSV, morph, and contour (bright-green tennis ball webcam)
-#define DEFAULT_HUE_LOWER           30
-#define DEFAULT_HUE_UPPER           69
-#define DEFAULT_SAT_LOWER           84
+#define DEFAULT_HUE_LOWER           4
+#define DEFAULT_HUE_UPPER           59
+#define DEFAULT_SAT_LOWER           67
 #define DEFAULT_SAT_UPPER           256
-#define DEFAULT_VAL_LOWER           85
+#define DEFAULT_VAL_LOWER           48
 #define DEFAULT_VAL_UPPER           256
 #define DEFAULT_FILTER_BACKGROUND_ON 0 // background subtraction with mog2
-#define DEFAULT_FILTER_ITERATIONS   5
+#define DEFAULT_FILTER_ITERATIONS   3
 #define DEFAULT_FILTER_KERNEL		cv::MORPH_ELLIPSE
 #define DEFAULT_FILTER_KERNEL_SIZE	3 // 3x3
-#define DEFAULT_FILTER_BLUR_ON		0 // Gaussian blur
+#define DEFAULT_FILTER_BLUR_ON		1 // Gaussian blur
 #define DEFAULT_FILTER_SIGMA        5 // sigma for Gaussian blur filter
 #define DEFAULT_HOUGH_ON			0 // HoughCircles instead of Contour detection
 #define DEFAULT_HOUGH_MIN_DIST		50
@@ -61,7 +61,7 @@
 #define DEFAULT_HOUGH_THRESH_UPPER  114
 #define DEFAULT_HOUGH_MIN_RADIUS    3
 #define DEFAULT_HOUGH_MAX_RADIUS    140
-#define DEFAULT_CONTOUR_MIN_AREA	(20*20) // 20px by 20px
+#define DEFAULT_CONTOUR_MIN_AREA	(2*2) // 20px by 20px
 #define DEFAULT_CONTOUR_MAX_AREA    (204800) // W*H / 1.5
 #define DEFAULT_CONTOUR_MAX_OBJECTS	50
 

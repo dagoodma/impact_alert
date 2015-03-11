@@ -77,12 +77,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="BallTracker.cpp" />
+    <ClCompile Include="Dynamics.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="TrackingParameters.cpp" />
     <ClCompile Include="Utility.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BallTracker.hpp" />
+    <ClInclude Include="Dynamics.hpp" />
     <ClInclude Include="TrackingParameters.hpp" />
     <ClInclude Include="Utility.hpp" />
   </ItemGroup>
