@@ -320,19 +320,20 @@ void BallTracker::filterFrame(cv::Mat &src, cv::Mat &dst) {
 	// Filter image with dilation, guassian blur, and erosion
 	int iterations = trackingParameters->getParameter("filterIterations");
 	int kernelSize = trackingParameters->getParameter("filterKernelSize");
-	cv::Mat kernel = cv::getStructuringElement(trackingParameters->getParameter("filterKernel"), cv::Size(kernelSize,kernelSize));
-	// Dilate
-	for (uint8_t i = 0; i < iterations; i++)
-		cv::dilate(dst, dst, kernel); 
 
+	
 	// Gaussian blur if enabled
 	if (trackingParameters->getParameter("filterBlurOn"))
 		cv::GaussianBlur(dst, dst, cv::Size(0,0), std::max(trackingParameters->getParameter("filterSigma"),1),
 			std::max(trackingParameters->getParameter("filterSigma"),1));
-
-	// Erode
+	
+	// Dilate and Erode
+	cv::Mat kernel = cv::getStructuringElement(trackingParameters->getParameter("filterKernel"), cv::Size(kernelSize,kernelSize));
 	for (uint8_t i = 0; i < iterations; i++)
 		cv::erode(dst, dst, kernel); 
+	for (uint8_t i = 0; i < iterations; i++)
+		cv::dilate(dst, dst, kernel); 
+
 }
 
 bool BallTracker::detectBall(cv::Mat &frame, cv::Point2i &center, int &radius) {
@@ -410,20 +411,21 @@ bool BallTracker::detectBall(cv::Mat &frame, cv::Point2i &center, int &radius) {
 void BallTracker::drawBall(cv::Mat &frame, cv::Point2i center, int outerRadius, int innerRadius,
 	const cv::Scalar& innerColor, const cv::Scalar& outerColor, const cv::Scalar& crosshairColor) {
 	// Draw circles
-	cv::circle(frame,center,innerRadius,innerColor,-1);
 	cv::circle(frame,center,outerRadius,outerColor,1);
 
-	// Draw crosshairs
-	int crosshairSize = (int)((float)outerRadius*2.2f);
-	int crosshairThickness = 1;
-	int crosshairOffset = crosshairSize/2;
-	cv::line(frame,cv::Point(center.x - crosshairOffset,center.y),
-		cv::Point(center.x + crosshairOffset,center.y),
-		crosshairColor, crosshairThickness);
-	cv::line(frame, cv::Point(center.x, center.y - crosshairOffset),
-		cv::Point(center.x, center.y + crosshairOffset),
-		crosshairColor, crosshairThickness);
-
+	// Draw crosshairs and inner dot if ball is large enough
+	if (outerRadius > 7) { 
+		cv::circle(frame,center,innerRadius,innerColor,-1); // draw inner dot
+		int crosshairSize = (int)((float)outerRadius*2.2f);
+		int crosshairThickness = 1;
+		int crosshairOffset = crosshairSize/2;
+		cv::line(frame,cv::Point(center.x - crosshairOffset,center.y),
+			cv::Point(center.x + crosshairOffset,center.y),
+			crosshairColor, crosshairThickness);
+		cv::line(frame, cv::Point(center.x, center.y - crosshairOffset),
+			cv::Point(center.x, center.y + crosshairOffset),
+			crosshairColor, crosshairThickness);
+	}
 	// Add text next to ball: (x,y, radius px)
 	char buf[250];
 	double textScale = 0.8f;
