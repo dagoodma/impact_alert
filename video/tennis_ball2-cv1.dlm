@@ -1,6 +1,25 @@
+% tennis_ball2-cut
 % Frame rate = 30 fps
 % Width = 640px
 % Height = 480px
+%
+% Tracking parameters:
+%         filterIterations: 3
+%         filterSigma: 5
+%         houghDP: 1
+%         houghMaxRadius: 140
+%         houghMinDist: 50
+%         houghMinRadius: 3
+%         houghThreshLower: 16
+%         houghThreshUpper: 114
+%         hueLower: 4
+%         hueUpper: 59
+%         satLower: 67
+%         satUpper: 256
+%         valLower: 48
+%         valUpper: 256
+% 
+%
 % found, x, y, radius
 0,-1,-1,-1
 1, 325, 354, 10
