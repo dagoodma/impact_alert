@@ -1,0 +1,45 @@
+x_{out,i} = 
+\begin{cases}
+  255, & \text{if } \qquad h_{min} \leq x_{hue,i} \leq h_{max}\\
+     & \quad \text{and } s_{min} \leq x_{sat,i} \leq s_{max}\\
+     & \quad \text{and } v_{min} \leq x_{val,i} \leq v_{max}\\
+  0, & \text{otherwise}
+\end{cases}
+
+\vec{x}_{out,i} = \max\limits_{\vec{x}' \text{: element } \vec{x}' \neq 0} \big( \vec{x}_{in,i} + \vec{x}' \big)
+
+
+|\vec{P}^C| = f(\hat{r}_{ball})
+
+
+\vec{x}^C = M \vec{\bar{x}}^S
+
+
+|\vec{x}^C| = \alpha |\vec{P}^C|  \quad \rightarrow  \quad \alpha = \frac{|\vec{x}^C|}{|\vec{P}^C|}
+
+
+
+\vec{f} = m\vec{g} - \vec{f}_D
+
+\vec{\ddot{x}} = \frac{d\vec{V}}{dt} = \vec{a}\\
+\vec{\dot{x}} = \frac{d\vec{x}}{dt} = \vec{V}
+
+\vec{\ddot{x}} &= \frac{1}{m} \big( m \vec{g} - \vec{f}_D \big)\\
+&= \vec{g} - \frac{1}{2m}\rho S |\vec{\dot{x}}|^2 C_D \hat{\vec{\dot{x}}}
+
+
+\vec{V}_n \simeq \frac{\vec{P}_n^C - \vec{P}_{n-1}^C}{\Delta t}
+
+
+\hat{\vec{V}}_{n+1} \simeq \vec{V}_n + \Delta t_s \cdot \vec{\ddot{x}}_n
+
+\hat{\vec{x}}_{n+1} = \frac{\hat{\vec{x}}_{n+1} - \vec{x}_n}{\Delta t}
+
+\hat{\vec{V}}_{n+1} \simeq \frac{\hat{\vec{x}}_{n+1} - \vec{x}_n}{\Delta t}
+
+
+& x_{min} \leq \hat{x}_{n+1} \leq x_{max}\\
+\text{and } & y_{min} \leq \hat{y}_{n+1} \leq y_{max}\\
+\text{and } & \hat{z}_{n+1} \leq 0 + \epsilon
+
+\hat{\vec{x}}_{n+1} \simeq \vec{x_n} + \Delta t \cdot \vec{V}_{n+1}
