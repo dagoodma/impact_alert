@@ -428,16 +428,15 @@ void BallTracker::filterFrame(cv::Mat &src, cv::Mat &dst) {
 	// Filter image with dilation, guassian blur, and erosion
 	int iterations = trackingParameters->getParameter("filterIterations");
 	int kernelSize = trackingParameters->getParameter("filterKernelSize");
-	cv::Mat kernel = cv::getStructuringElement(trackingParameters->getParameter("filterKernel"), cv::Size(kernelSize,kernelSize));
-	// Dilate
-	for (uint8_t i = 0; i < iterations; i++)
-		cv::dilate(dst, dst, kernel); 
-
+	cv::Mat kernel = cv::getStructuringElement(trackingParameters->getParameter("filterKernel"),
+		cv::Size(kernelSize, kernelSize));
 	// Gaussian blur if enabled
 	if (trackingParameters->getParameter("filterBlurOn"))
 		cv::GaussianBlur(dst, dst, cv::Size(0,0), std::max(trackingParameters->getParameter("filterSigma"),1),
 			std::max(trackingParameters->getParameter("filterSigma"),1));
-
+	// Dilate
+	for (uint8_t i = 0; i < iterations; i++)
+		cv::dilate(dst, dst, kernel); 
 	// Erode
 	for (uint8_t i = 0; i < iterations; i++)
 		cv::erode(dst, dst, kernel); 

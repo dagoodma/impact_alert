@@ -3,6 +3,8 @@
 #define TRACKING_PARAMETERS_H
 
 // Include standard libraries
+#define _USE_MATH_DEFINES // to get M_PI
+#include <math.h>
 #include <string>
 #include <map>
 
@@ -49,7 +51,7 @@
 #define DEFAULT_SAT_UPPER           256
 #define DEFAULT_VAL_LOWER           66
 #define DEFAULT_VAL_UPPER           256
-#define DEFAULT_FILTER_BACKGROUND_ON 0 // background subtraction with mog2
+#define DEFAULT_FILTER_BACKGROUND_ON 1 // background subtraction with mog2
 #define DEFAULT_FILTER_ITERATIONS   3
 #define DEFAULT_FILTER_KERNEL		cv::MORPH_ELLIPSE
 #define DEFAULT_FILTER_KERNEL_SIZE	3 // 3x3
@@ -61,7 +63,7 @@
 #define DEFAULT_HOUGH_THRESH_UPPER  114
 #define DEFAULT_HOUGH_MIN_RADIUS    3
 #define DEFAULT_HOUGH_MAX_RADIUS    140
-#define DEFAULT_CONTOUR_MIN_AREA	(4*4) // 20px by 20px
+#define DEFAULT_CONTOUR_MIN_AREA	(M_PI*8*8) // 20px by 20px
 #define DEFAULT_CONTOUR_MAX_AREA    (204800) // W*H / 1.5
 #define DEFAULT_CONTOUR_MAX_OBJECTS	50
 
