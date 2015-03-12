@@ -18,9 +18,8 @@ predict = 1;
 predictAll = 1;
 predictSteps = 200;
 predictStartStep = 4;
-velocityScale = 0.3; % scales estimated velocity 
 
-predictTTC = 0.13; % [sec] minimum TTC to decide
+predictTTC = 0.15; % [sec] minimum TTC to decide
 predictMu = @(n) n * 3/4; % mean of trajectory hits in time
 predictVar = 2.3; % variance of trajectory hits in time
 predictThreshold = 0.35; % 40 percent or greater is a hit
@@ -97,8 +96,8 @@ radius_hat = ballRadius(indices);
 figure();
 subplot(2,2,1);
 Xs_hat = Xs(indices,:);
-Xs_hat(:,2) = Ly - Xs_hat(:,2);
-plot(Xs_hat(:,1),Xs_hat(:,2),'ob-')
+%Xs_hat(:,2) = Ly - Xs_hat(:,2);
+plot(Xs_hat(:,1),Ly - Xs_hat(:,2),'ob-')
 xlim([0 Lx]);
 ylim([0 Ly]);
 xlabel('X^S_x [px]')
@@ -115,10 +114,10 @@ ylabel('Radius [px]')
 % Estimate distance vs Xs_y
 subplot(2,2,3)
 d_est = foreshorteningModel(radius_hat);
-plot(d_est,Xs_hat(:,2))
+plot(d_est,Ly-Xs_hat(:,2))
 xlabel('Distance [m]');
-ylabel('X^S_y [px]')
-title('X^S_y vs. Estimated Distance');
+ylabel('-X^S_y [px]')
+title('-X^S_y vs. Estimated Distance');
 
 subplot(2,2,4)
 plot(time_hat,d_est)
@@ -150,7 +149,7 @@ for i=1:pointCount
     % Predict trajectory n ahead
     P_traj = zeros(3,predictSteps);
     if i > predictStartStep
-        P_traj = ball.predictTrajectory(predictSteps,velocityScale);
+        P_traj = ball.predictTrajectory(predictSteps);
     
     
         % Prune trajectory points that are past the focal plane (Z <= 0)
@@ -208,13 +207,13 @@ ylabel('|V^C| [m/s^2]');
 
 %% Create 3dplot with estimated distance mapped as (X,Z,Y)
 figure()
-plot3(Pc(1,:),Pc(3,:),Pc(2,:),'o-')
+plot3(Pc(1,:),Pc(3,:),-Pc(2,:),'o-')
 hold on;
-plot3(Pc(1,1),Pc(3,1),Pc(2,1),'g*')
-plot3(Pc(1,end),Pc(3,end),Pc(2,end),'r*')
+plot3(Pc(1,1),Pc(3,1),-Pc(2,1),'g*')
+plot3(Pc(1,end),Pc(3,end),-Pc(2,end),'r*')
 
 % Draw velocity vectors on trajectory
-q = quiver3(Pc(1,:), Pc(3,:), Pc(2,:), v_cx, v_cz, v_cy);
+q = quiver3(Pc(1,:), Pc(3,:), -Pc(2,:), v_cx, v_cz, -v_cy);
 set(q,'Color','red');
 
 %% Draw camera bounding boxes
@@ -249,7 +248,7 @@ if (predict)
             if (P_hit(i))
                 col = 'r';
             end
-            plot3(X, Z, Y,sprintf('--%c',col));
+            plot3(X, Z, -Y,sprintf('--%c',col));
         end
     end
 end
@@ -260,24 +259,22 @@ legend('Trajectory in Time', 'Start Position', 'End Position',...
 th = title(sprintf('3D Trajectory Model of ''%s''',filename));
 set(th,'interpreter','none')
 set(gca,'xgrid','on')
+box on;
 
 view(113,8) % az, elev 
-% 
-% xlim([-0.5 0.5]);
-% yl = ylim()
-% ylim([0 yl(2)]);
-% zlim([-1 0.4]);
 
-% Set window limits
+% Get window limits
 xl = xlim();
 yl = ylim();
 zl = zlim();
 
+% Set window limits
 yl_min = 0;
 yl_max = Pc(3,1) + 0.4;
+% Don't set xlim
 % xl_min
 % xl_max
-zl_min = Pc(2,1);
+zl_min = -Pc(2,1);
 zl_max = 0.4;
 
 ylim([yl_min yl_max]);
@@ -319,7 +316,7 @@ if doFinalPrediction
     
     figure();
     for i=1:length(time_hat)
-        plot(Xs_hat(i,1), Xs_hat(i,2),'bo'); % plot the ball
+        plot(Xs_hat(i,1), Ly-Xs_hat(i,2),'bo'); % plot the ball
         distance = sqrt(sum(Pc(:,i).^2,1)); % find distance
         ttc = distance/sqrt(sum(Vc(:,i)).^2);
         
@@ -331,7 +328,7 @@ if doFinalPrediction
             Xs_traj = Xs_traj*diag(1./Xs_traj(3,:)); % homogeneous normalization
             Xs_traj = Xs_traj(1:2,:); % remove third row 
             %Xs_traj = [Xs_traj(1,:); Ly - Xs_traj(2,:)]; % invert y for plotting
-            plot(Xs_traj(1,:),Xs_traj(2,:),'r');
+            plot(Xs_traj(1,:),Ly-Xs_traj(2,:),'r');
             hold off;
         end
         xlim([0 Lx]);
@@ -339,14 +336,23 @@ if doFinalPrediction
         th = title(sprintf('Trajectory Predictions in ''%s''',filename));
         set(th,'interpreter','none');
         
+        % Make hit prediction if we're under TTC threshold
         if (ttc <= predictTTC)
             figure();
             n = i;
             x=1:n;
-            plot(x,P_hit(1:n),'*');
+            stem(time_hat(x),P_hit(1:n),'*:');
             hold on;
             norm = normpdf(x,predictMu(n),predictVar);
-            plot(x,norm,'g');
+            plot(time_hat(x),norm,'g');
+            xlabel('Time [sec]');
+            ylabel('Hit Predicted');
+            set(gca,'YTickMode', 'manual');
+            set(gca,'YTick', [0 1]);
+            set(gca,'YTickLabel', {'no', 'yes'});
+            
+            title('Hit Predictions Over Time with Weighting Function')
+            legend('Hit Prediction', 'Weighting Function');
             disp('Probability of hit2: ');
             impactProbability = P_hit(1:n)*norm';
             impactTTC = ttc;
@@ -362,8 +368,12 @@ if doFinalPrediction
     end
     
     if ~impactPredicted
-        fprintf('No impact detected! (TTC = %.2f, P = %.2f)\n', impactTTC, impactProbability);
+        predictionStr = sprintf('No impact detected! (TTC = %.2f, P = %.2f)\n', impactTTC, impactProbability);
+        fprintf(predictionStr);
+        text(0.1,0.6,predictionStr,'Color','g','FontSize',14);
     else
-        fprintf('Impact is detected! (TTC = %.2f, P = %.2f)\n', impactTTC, impactProbability);
+        predictionStr = sprintf('Impact is detected! (TTC = %.2f, P = %.2f)\n', impactTTC, impactProbability);
+        fprintf(predictionStr);
+        text(0.1,0.6,predictionStr,'Color','r','FontSize',14);
     end
 end

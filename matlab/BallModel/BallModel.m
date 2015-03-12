@@ -66,24 +66,26 @@ classdef BallModel < handle
         
         % Uses a model of the ball to predict nSteps forward in time.
         % Returns a 3xn vector of positions in camera coordinates.
-        function P = predictTrajectory(obj,nSteps,scaleVelocity)
+        % This is all done in the camera frame, so gravity is positive,
+        % since y points downward.
+        function P = predictTrajectory(obj,nSteps)
             X_est = zeros(3,nSteps);
             C = (obj.rho * obj.S * obj.C_d)/(2*obj.m);
             dt = 1/obj.f_s;
             
             %X_0 = obj.P_Clast; % don't need since we have V already
             X_0 = obj.P_C;
-            Xdot_0 = obj.V_C * scaleVelocity;
+            Xdot_0 = obj.V_C;
             
             for i=1:nSteps
                 Xdot_0_mag = norm(Xdot_0);
                 Xdot_0_norm = Xdot_0 / Xdot_0_mag;
                 
                 % Forward Euler to solve for next position
-                Xddot_0 = [0 -obj.g 0]' - C*Xdot_0_mag^2*Xdot_0_norm;
+                Xddot_0 = [0 obj.g 0]' - C*Xdot_0_mag^2*Xdot_0_norm;
                 Xdot_1 = Xdot_0 + dt*Xddot_0;
                 
-                X_1 = X_0 + dt*Xdot_1*10;
+                X_1 = X_0 + dt*Xdot_1;
                 
                 X_est(:,i) = X_1;
                 
